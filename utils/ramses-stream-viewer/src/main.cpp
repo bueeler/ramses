@@ -142,7 +142,7 @@ private:
         MeshEntry meshEntry;
         meshEntry.streamSource = streamSource;
         meshEntry.streamTexture = m_scene->createStreamTexture(*m_texture, streamSource);
-        meshEntry.textureSampler = m_scene->createTextureSampler(ramses::ETextureAddressMode_Repeat, ramses::ETextureAddressMode_Repeat, ramses::ETextureSamplingMethod_Nearest, *meshEntry.streamTexture);
+        meshEntry.textureSampler = m_scene->createTextureSampler(ramses::ETextureAddressMode_Repeat, ramses::ETextureAddressMode_Repeat, ramses::ETextureSamplingMethod_Nearest, ramses::ETextureSamplingMethod_Nearest, *meshEntry.streamTexture);
 
         meshEntry.appearance = m_scene->createAppearance(*m_effect);
 
@@ -258,12 +258,12 @@ public:
     {
         if(available)
         {
-            printf("\n\nStream %i available !\n", streamId.getValue());
+            printf("\n\nStream %u available !\n", streamId.getValue());
             m_sceneCreator.createMesh(streamId);
         }
         else
         {
-            printf("\n\nStream %i unavailable !\n", streamId.getValue());
+            printf("\n\nStream %u unavailable !\n", streamId.getValue());
             m_sceneCreator.removeMesh(streamId);
         }
     }

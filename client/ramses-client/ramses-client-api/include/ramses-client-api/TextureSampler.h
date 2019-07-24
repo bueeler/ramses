@@ -15,13 +15,19 @@
 
 namespace ramses
 {
+    class Texture2D;
+    class Texture3D;
+    class TextureCube;
+    class Texture2DBuffer;
+    class RenderBuffer;
+    class StreamTexture;
+
     /**
      * @brief The TextureSampler holds a texture and its sampling parameters
      */
     class RAMSES_API TextureSampler : public SceneObject
     {
     public:
-
         /**
         * @brief Gets the texture wrap mode for the u axis
         *
@@ -44,11 +50,18 @@ namespace ramses
         ETextureAddressMode getWrapRMode() const;
 
         /**
-        * @brief Gets the texture sampling method
+        * @brief Gets the texture min sampling method
         *
-        * @return ETextureSamplingMethod sampling method
+        * @return ETextureSamplingMethod min sampling method
         */
-        ETextureSamplingMethod getSamplingMethod() const;
+        ETextureSamplingMethod getMinSamplingMethod() const;
+
+        /**
+        * @brief Gets the texture mag sampling method
+        *
+        * @return ETextureSamplingMethod mag sampling method
+        */
+        ETextureSamplingMethod getMagSamplingMethod() const;
 
         /**
         * @brief Gets the texture sampling anisotropy level
@@ -58,16 +71,39 @@ namespace ramses
         uint32_t getAnisotropyLevel() const;
 
         /**
-        * Stores internal data for implementation specifics of TextureSampler.
-        */
-        class TextureSamplerImpl& impl;
-
-        /**
         * @brief Gets the type of the texture
         *
         * @return Type of the texture, see ERamsesObjectType enum for possible values.
         */
         ERamsesObjectType getTextureType() const;
+
+        /**
+        * @brief Replaces current texture content source with a new one.
+        *        Texture data can be changed from/to any type/format with these exceptions:
+        *          - Texture3D can only be changed to another Texture3D
+        *          - texture data cannot be changed if this TextureSampler is marked as texture consumer
+        *            to be used for data linking (see ramses::Scene::createTextureConsumer)
+        *
+        * @param[in] dataSource Texture data source to be used with this sampler.
+        * @return StatusOK for success, otherwise the returned status can be used
+        *         to resolve error message using getStatusMessage().
+        */
+        status_t setTextureData(const Texture2D& dataSource);
+        /// @copydoc setTextureData(const Texture2D&)
+        status_t setTextureData(const Texture3D& dataSource);
+        /// @copydoc setTextureData(const Texture2D&)
+        status_t setTextureData(const TextureCube& dataSource);
+        /// @copydoc setTextureData(const Texture2D&)
+        status_t setTextureData(const Texture2DBuffer& dataSource);
+        /// @copydoc setTextureData(const Texture2D&)
+        status_t setTextureData(const RenderBuffer& dataSource);
+        /// @copydoc setTextureData(const Texture2D&)
+        status_t setTextureData(const StreamTexture& dataSource);
+
+        /**
+        * Stores internal data for implementation specifics of TextureSampler.
+        */
+        class TextureSamplerImpl& impl;
 
     protected:
         /**

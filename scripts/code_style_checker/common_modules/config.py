@@ -22,7 +22,7 @@ G_PROP_FILES = [
 
 G_LICENSE_TEMPLATE_OPEN = """
   -------------------------------------------------------------------------
-  Copyright (C) [YYYY] BMW Car IT GmbH
+  Copyright (C) [YYYY] BMW XXXX
   -------------------------------------------------------------------------
   This Source Code Form is subject to the terms of the Mozilla Public
   License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -32,10 +32,10 @@ G_LICENSE_TEMPLATE_OPEN = """
 
 G_LICENSE_TEMPLATE_PROP = """
   -------------------------------------------------------------------------
-  Copyright (C) [YYYY] BMW Car IT GmbH
+  Copyright (C) [YYYY] BMW XXXX
   All rights reserved.
   -------------------------------------------------------------------------
-  This document contains proprietary information belonging to BMW Car IT.
+  This document contains proprietary information belonging to BMW XXXX.
   Passing on and copying of this document, use and communication of its
   contents is not permitted without prior written authorization.
   -------------------------------------------------------------------------

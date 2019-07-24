@@ -367,6 +367,13 @@ namespace ramses_internal
                 m_renderer.systemCompositorAddIviSurfaceToIviLayer(command.waylandIviSurfaceId, command.waylandIviLayerId);
                 break;
             }
+            case ERendererCommand_SystemCompositorControllerSetIviLayerVisibility:
+            {
+                const CompositorCommand& command = m_executedCommands.getCommandData<CompositorCommand>(i);
+                LOG_INFO(CONTEXT_RENDERER, " - executing " << EnumToString(commandType) << " layerId " << command.waylandIviLayerId);
+                m_renderer.systemCompositorSetIviLayerVisibility(command.waylandIviLayerId, command.visibility);
+                break;
+            }
             case ERendererCommand_SystemCompositorControllerRemoveIviSurfaceFromIviLayer:
             {
                 const CompositorCommand& command = m_executedCommands.getCommandData<CompositorCommand>(i);
@@ -385,7 +392,7 @@ namespace ramses_internal
             {
                 LOG_INFO(CONTEXT_RENDERER, " - executing " << EnumToString(commandType));
                 const CompositorCommand& command = m_executedCommands.getCommandData<CompositorCommand>(i);
-                m_renderer.systemCompositorScreenshot(command.fileName);
+                m_renderer.systemCompositorScreenshot(command.fileName, command.screenIviId);
                 break;
             }
             case ERendererCommand_ConfirmationEcho:
@@ -437,17 +444,11 @@ namespace ramses_internal
             case ERendererCommand_SetFrameTimerLimits:
             {
                 const SetFrameTimerLimitsCommmand& command = m_executedCommands.getCommandData<SetFrameTimerLimitsCommmand>(i);
-                LOG_INFO(CONTEXT_RENDERER, " - executing " << EnumToString(commandType) << " clientResUpload " << command.limitForClientResourcesUploadMicrosec << " actionApply " << command.limitForSceneActionsApplyMicrosec << " render " << command.limitForOffscreenBufferRenderMicrosec);
+                LOG_INFO(CONTEXT_RENDERER, " - executing " << EnumToString(commandType) << " sceneResUpload " << command.limitForSceneResourcesUploadMicrosec << " clientResUpload " << command.limitForClientResourcesUploadMicrosec << " actionApply " << command.limitForSceneActionsApplyMicrosec << " render " << command.limitForOffscreenBufferRenderMicrosec);
+                m_frameTimer.setSectionTimeBudget(EFrameTimerSectionBudget::SceneResourcesUpload, command.limitForSceneResourcesUploadMicrosec);
                 m_frameTimer.setSectionTimeBudget(EFrameTimerSectionBudget::ClientResourcesUpload, command.limitForClientResourcesUploadMicrosec);
                 m_frameTimer.setSectionTimeBudget(EFrameTimerSectionBudget::SceneActionsApply, command.limitForSceneActionsApplyMicrosec);
                 m_frameTimer.setSectionTimeBudget(EFrameTimerSectionBudget::OffscreenBufferRender, command.limitForOffscreenBufferRenderMicrosec);
-                break;
-            }
-            case ERendererCommand_SetResourceActionTimer:
-            {
-                const SetFrameTimerLimitsCommmand& command = m_executedCommands.getCommandData<SetFrameTimerLimitsCommmand>(i);
-                LOG_INFO(CONTEXT_RENDERER, " - executing " << EnumToString(commandType) << " sceneResUpload " << command.limitForSceneResourcesUploadMicrosec);
-                m_frameTimer.setSectionTimeBudget(EFrameTimerSectionBudget::SceneResourcesUpload, command.limitForSceneResourcesUploadMicrosec);
                 break;
             }
             case ERendererCommand_SetLimits_FlushesForceApply:

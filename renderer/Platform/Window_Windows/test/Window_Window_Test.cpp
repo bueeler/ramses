@@ -16,10 +16,10 @@ using namespace testing;
 
 namespace ramses_internal
 {
-    class WindowWindows : public testing::Test
+    class AWindowWindows : public testing::Test
     {
     public:
-        WindowWindows()
+        AWindowWindows()
             : window(config, eventHandlerMock, 0)
         {
         }
@@ -77,7 +77,27 @@ namespace ramses_internal
         EXPECT_EQ(Window_Windows::convertVirtualKeyCodeIntoRamsesKeyCode(0x73, 0), EKeyCode_F4);
     }
 
-    TEST_F(WindowWindows, singleKeyPressEventTriggersKeyPressedEventWithCorrectKeyCode)
+    TEST(Window_Windows, propagatesResizeEvents)
+    {
+        DisplayConfig config;
+        config.setResizable(true);
+        NiceMock<WindowEventHandlerMock> eventHandlerMock;
+        Window_Windows window(config, eventHandlerMock, 0);
+
+        ASSERT_TRUE(window.init());
+        for (UInt32 i = 0; i < 10; i++) // enforce handling of all enqueued window events which will trigger our event handler
+            window.handleEvents();
+
+        const uint32_t width = 15;
+        const uint32_t height = 20;
+        const int packedWindowSize = (static_cast<int>(height) << 16) | width;
+        ASSERT_TRUE(PostMessage(window.getNativeWindowHandle(), WM_SIZE, 0, packedWindowSize));
+
+        EXPECT_CALL(eventHandlerMock, onResize(15, 20)).Times(1);
+        window.handleEvents();
+    }
+
+    TEST_F(AWindowWindows, singleKeyPressEventTriggersKeyPressedEventWithCorrectKeyCode)
     {
         testKeyCode(0x41,        EKeyCode_A);
         testKeyCode(0x30,        EKeyCode_0);
@@ -90,7 +110,7 @@ namespace ramses_internal
         testKeyCode(VK_SHIFT,    EKeyCode_ShiftLeft,     EKeyModifier_Shift);
     }
 
-    TEST_F(WindowWindows, leftMouseButtonDownEventTriggersLeftButtonDownEvent)
+    TEST_F(AWindowWindows, leftMouseButtonDownEventTriggersLeftButtonDownEvent)
     {
         sendMouseEvent(5, 10, WM_LBUTTONDOWN);
 
@@ -98,7 +118,7 @@ namespace ramses_internal
         processAllEvents();
     }
 
-    TEST_F(WindowWindows, leftMouseButtonUpEventTriggersLeftButtonUpEvent)
+    TEST_F(AWindowWindows, leftMouseButtonUpEventTriggersLeftButtonUpEvent)
     {
         sendMouseEvent(5, 10, WM_LBUTTONUP);
 
@@ -106,7 +126,7 @@ namespace ramses_internal
         processAllEvents();
     }
 
-    TEST_F(WindowWindows, rightMouseButtonDownEventTriggersRightButtonDownEvent)
+    TEST_F(AWindowWindows, rightMouseButtonDownEventTriggersRightButtonDownEvent)
     {
         sendMouseEvent(6, 11, WM_RBUTTONDOWN);
 
@@ -114,7 +134,7 @@ namespace ramses_internal
         processAllEvents();
     }
 
-    TEST_F(WindowWindows, rightMouseButtonUpEventTriggersRightButtonUpEvent)
+    TEST_F(AWindowWindows, rightMouseButtonUpEventTriggersRightButtonUpEvent)
     {
         sendMouseEvent(6, 11, WM_RBUTTONUP);
 
@@ -122,7 +142,7 @@ namespace ramses_internal
         processAllEvents();
     }
 
-    TEST_F(WindowWindows, middleMouseButtonDownEventTriggersMiddleButtonDownEvent)
+    TEST_F(AWindowWindows, middleMouseButtonDownEventTriggersMiddleButtonDownEvent)
     {
         sendMouseEvent(6, 11, WM_MBUTTONDOWN);
 
@@ -130,7 +150,7 @@ namespace ramses_internal
         processAllEvents();
     }
 
-    TEST_F(WindowWindows, middleMouseButtonUpEventTriggersMiddleButtonUpEvent)
+    TEST_F(AWindowWindows, middleMouseButtonUpEventTriggersMiddleButtonUpEvent)
     {
         sendMouseEvent(6, 11, WM_MBUTTONUP);
 
@@ -138,7 +158,7 @@ namespace ramses_internal
         processAllEvents();
     }
 
-    TEST_F(WindowWindows, positiveMouseWheelEventTriggersMouseWheelUpEvent)
+    TEST_F(AWindowWindows, positiveMouseWheelEventTriggersMouseWheelUpEvent)
     {
         const int packedWheelDelta = WHEEL_DELTA << 16;
         sendMouseEvent(7, 12, WM_MOUSEWHEEL, packedWheelDelta);
@@ -147,7 +167,7 @@ namespace ramses_internal
         processAllEvents();
     }
 
-    TEST_F(WindowWindows, negativeMouseWheelEventTriggersMouseWheelDownEvent)
+    TEST_F(AWindowWindows, negativeMouseWheelEventTriggersMouseWheelDownEvent)
     {
         const auto packedWheelDelta = static_cast<unsigned int>(-(WHEEL_DELTA << 16));
         sendMouseEvent(7, 12, WM_MOUSEWHEEL, packedWheelDelta);
@@ -156,7 +176,7 @@ namespace ramses_internal
         processAllEvents();
     }
 
-    TEST_F(WindowWindows, largeMouseWheelEventTriggersMultipleMouseWheelEvents)
+    TEST_F(AWindowWindows, largeMouseWheelEventTriggersMultipleMouseWheelEvents)
     {
         const int packedWheelDelta = (3*WHEEL_DELTA) << 16;
         sendMouseEvent(7, 12, WM_MOUSEWHEEL, packedWheelDelta);
@@ -165,7 +185,7 @@ namespace ramses_internal
         processAllEvents();
     }
 
-    TEST_F(WindowWindows, mouseMoveEventTriggersMouseMoveEvent)
+    TEST_F(AWindowWindows, mouseMoveEventTriggersMouseMoveEvent)
     {
         sendMouseEvent(5, 10, WM_MOUSEMOVE);
 
@@ -175,7 +195,7 @@ namespace ramses_internal
         processAllEvents();
     }
 
-    TEST_F(WindowWindows, mouseLeaveEventTriggersWindowLeaveEvent)
+    TEST_F(AWindowWindows, mouseLeaveEventTriggersWindowLeaveEvent)
     {
         sendMouseEvent(5, 10, WM_MOUSEMOVE); // to simulate a window leave event we have to enter the window first
         sendWindowLeaveEvent();
@@ -186,7 +206,7 @@ namespace ramses_internal
         processAllEvents();
     }
 
-    TEST_F(WindowWindows, mouseMoveEventTriggersWindowEnterEvent)
+    TEST_F(AWindowWindows, mouseMoveEventTriggersWindowEnterEvent)
     {
         sendWindowLeaveEvent(); // to simulate a window enter event we have to leave the window first
         sendMouseEvent(5, 10, WM_MOUSEMOVE);

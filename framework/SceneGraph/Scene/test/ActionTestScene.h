@@ -30,9 +30,6 @@ namespace ramses_internal
         virtual const String&               getName                         () const override;
         virtual SceneId                     getSceneId                      () const override;
 
-        virtual void                        setSceneVersionTag              (SceneVersionTag sceneVersionTag) override;
-        virtual SceneVersionTag             getSceneVersionTag              () const override;
-
         // Renderable
         virtual RenderableHandle            allocateRenderable              (NodeHandle nodeHandle, RenderableHandle handle = RenderableHandle::Invalid()) override;
         virtual void                        releaseRenderable               (RenderableHandle renderableHandle) override;
@@ -58,18 +55,18 @@ namespace ramses_internal
         virtual void                        setRenderStateDrawMode                (RenderStateHandle stateHandle, EDrawMode drawMode) override;
         virtual void                        setRenderStateDepthFunc               (RenderStateHandle stateHandle, EDepthFunc func) override;
         virtual void                        setRenderStateDepthWrite              (RenderStateHandle stateHandle, EDepthWrite flag) override;
+        virtual void                        setRenderStateScissorTest             (RenderStateHandle stateHandle, EScissorTest flag, const RenderState::ScissorRegion& region) override;
         virtual void                        setRenderStateStencilFunc             (RenderStateHandle stateHandle, EStencilFunc func, UInt8 ref, UInt8 mask) override;
         virtual void                        setRenderStateStencilOps              (RenderStateHandle stateHandle, EStencilOp sfail, EStencilOp dpfail, EStencilOp dppass) override;
         virtual void                        setRenderStateColorWriteMask          (RenderStateHandle stateHandle, ColorWriteMask colorMask) override;
         virtual const RenderState&          getRenderState                        (RenderStateHandle stateHandle) const override;
 
         // Camera
-        virtual CameraHandle                allocateCamera                  (ECameraProjectionType type, NodeHandle nodeHandle, CameraHandle handle = CameraHandle::Invalid()) override;
+        virtual CameraHandle                allocateCamera                  (ECameraProjectionType type, NodeHandle nodeHandle, DataInstanceHandle viewportDataInstance, CameraHandle handle = CameraHandle::Invalid()) override;
         virtual void                        releaseCamera                   (CameraHandle cameraHandle) override;
         virtual Bool                        isCameraAllocated               (CameraHandle handle) const override;
         virtual UInt32                      getCameraCount                  () const override;
         // Camera Viewport
-        virtual void                        setCameraViewport               (CameraHandle cameraHandle, const Viewport& vp) override;
         virtual void                        setCameraFrustum                (CameraHandle cameraHandle, const Frustum& frustum) override;
         virtual const Camera&               getCamera                       (CameraHandle cameraHandle) const override;
 

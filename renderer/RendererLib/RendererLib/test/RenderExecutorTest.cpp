@@ -29,8 +29,8 @@ namespace
     const Float fakeNearPlane = 0.1f;
     const Float fakeFarPlane = 1500.f;
 
-    const UInt32 fakeViewportX = 15u;
-    const UInt32 fakeViewportY = 16u;
+    const Int32 fakeViewportX = 15;
+    const Int32 fakeViewportY = 16;
     const UInt32 fakeViewportWidth = 17u;
     const UInt32 fakeViewportHeight = 18u;
 
@@ -38,7 +38,7 @@ namespace
     const UInt32 indexCount = 13;
 }
 
-typedef ramses_internal::Pair<DataInstanceHandle, DataInstanceHandle> DataInstances;
+typedef std::pair<DataInstanceHandle, DataInstanceHandle> DataInstances;
 
 // This Matrix comparison matcher is needed to compare the MVP etc matrices. It must allow
 // a relatively high error because heavy optimizations on some platforms may lead to significant
@@ -49,8 +49,8 @@ MATCHER_P(PermissiveMatrixEq, other, "")
     const UInt32 numElements = sizeof(arg_type) / sizeof(arg.m11);
     for (UInt32 index = 0; index < numElements; index++)
     {
-        const Float a = arg.getRawData()[index];
-        const Float b = other.getRawData()[index];
+        const Float a = arg.data[index];
+        const Float b = other.data[index];
 
         const Float fDelta = PlatformMath::Abs(a - b);
         if (fDelta > 1e-5f)
@@ -180,7 +180,14 @@ protected:
     {
         const RenderPassHandle pass = sceneAllocator.allocateRenderPass();
         const NodeHandle cameraNode = sceneAllocator.allocateNode();
-        const CameraHandle camera = sceneAllocator.allocateCamera(cameraProjType, cameraNode);
+        const auto vpDataLayout = sceneAllocator.allocateDataLayout({ {EDataType_DataReference}, {EDataType_DataReference} });
+        const auto vpDataRefLayout = sceneAllocator.allocateDataLayout({ {EDataType_Vector2I} });
+        const auto vpDataInstance = sceneAllocator.allocateDataInstance(vpDataLayout);
+        const auto vpOffsetInstance = sceneAllocator.allocateDataInstance(vpDataRefLayout);
+        const auto vpSizeInstance = sceneAllocator.allocateDataInstance(vpDataRefLayout);
+        scene.setDataReference(vpDataInstance, Camera::ViewportOffsetField, vpOffsetInstance);
+        scene.setDataReference(vpDataInstance, Camera::ViewportSizeField, vpSizeInstance);
+        const CameraHandle camera = sceneAllocator.allocateCamera(cameraProjType, cameraNode, vpDataInstance);
 
         if (ECameraProjectionType_Perspective == cameraProjType)
         {
@@ -194,7 +201,8 @@ protected:
 
         if (ECameraProjectionType_Renderer != cameraProjType)
         {
-            scene.setCameraViewport(camera, viewport);
+            scene.setDataSingleVector2i(vpOffsetInstance, DataFieldHandle{ 0 }, { viewport.posX, viewport.posY });
+            scene.setDataSingleVector2i(vpSizeInstance, DataFieldHandle{ 0 }, { Int32(viewport.width), Int32(viewport.height) });
         }
 
         sceneAllocator.allocateTransform(cameraNode);
@@ -219,7 +227,7 @@ protected:
     DataInstances createTestDataInstance(bool setTextureSampler = true, bool setIndexArray = true)
     {
         //create sampler
-        sampler = sceneAllocator.allocateTextureSampler({ { EWrapMethod_Clamp, EWrapMethod_Repeat, EWrapMethod_RepeatMirrored, ESamplingMethod_NearestWithMipmaps, 2u }, ResourceProviderMock::FakeTextureHash });
+        sampler = sceneAllocator.allocateTextureSampler({ { EWrapMethod::Clamp, EWrapMethod::Repeat, EWrapMethod::RepeatMirrored, ESamplingMethod::Nearest_MipMapNearest, ESamplingMethod::Nearest, 2u }, ResourceProviderMock::FakeTextureHash });
 
         // create data instance
         DataInstances dataInstances;
@@ -350,6 +358,9 @@ protected:
 
         // RetiresOnSaturation makes it possible to invoke this expect method multiple times without
         // the expectations override each other                                                                                      .RetiresOnSaturation();
+
+        //TODO Mohamed: move those expectations in the if-clause after the caching issue of render states is clarified
+        EXPECT_CALL(device, scissorTest(_, _)).RetiresOnSaturation();
         if (expectRenderStateChanges)
         {
             EXPECT_CALL(device, depthFunc(_))                                                                                                     .RetiresOnSaturation();
@@ -374,7 +385,7 @@ protected:
         EXPECT_CALL(device, setConstant(fieldCameraViewMatrix, 1, Matcher<const Matrix44f*>(Pointee(PermissiveMatrixEq(expectedCameraViewMatrix)))))        .RetiresOnSaturation();
         EXPECT_CALL(device, setConstant(fieldProjMatrix, 1, Matcher<const Matrix44f*>(Pointee(PermissiveMatrixEq(expectedProjMatrix)))))                    .RetiresOnSaturation();
         EXPECT_CALL(device, activateTexture(FakeTextureDeviceHandle, textureField))                                                                         .RetiresOnSaturation();
-        EXPECT_CALL(device, setTextureSampling(textureField, EWrapMethod_Clamp, EWrapMethod_Repeat, EWrapMethod_RepeatMirrored, ESamplingMethod_NearestWithMipmaps, 2u)).RetiresOnSaturation();
+        EXPECT_CALL(device, setTextureSampling(textureField, EWrapMethod::Clamp, EWrapMethod::Repeat, EWrapMethod::RepeatMirrored, ESamplingMethod::Nearest_MipMapNearest, ESamplingMethod::Nearest, 2u)).RetiresOnSaturation();
         EXPECT_CALL(device, setConstant(fakeEffectInputs.dataRefField2, 1, Matcher<const Float*>(Pointee(Eq(-666.f)))))                                           .RetiresOnSaturation();
         EXPECT_CALL(device, setConstant(fakeEffectInputs.dataRefFieldMatrix22f, 1, Matcher<const Matrix22f*>(Pointee(Eq(Matrix22f(1,2,3,4))))))                   .RetiresOnSaturation();
         if (expectIndexBufferActivation)
@@ -418,6 +429,9 @@ protected:
         {
             EXPECT_CALL(device, depthWrite(EDepthWrite::Enabled));
         }
+
+        RenderState::ScissorRegion scissorRegion{};
+        EXPECT_CALL(device, scissorTest(EScissorTest::Disabled, scissorRegion));
 
         EXPECT_CALL(device, clear(clearFlags));
     }
@@ -570,7 +584,39 @@ TEST_F(ARenderExecutor, RenderMultipleRenderPassesIntoMultipleRenderTargets)
         expectFrameRenderCommands(renderable1, Matrix44f::Identity, Matrix44f::Identity, Matrix44f::Identity, expectedProjectionMatrix1);
         expectActivateRenderTarget(renderTargetDeviceHandle2, true, fakeVp2);
         expectClearRenderTarget();
-        expectFrameRenderCommands(renderable2, Matrix44f::Identity, Matrix44f::Identity, Matrix44f::Identity, expectedProjectionMatrix2, false, false, false);
+        expectFrameRenderCommands(renderable2, Matrix44f::Identity, Matrix44f::Identity, Matrix44f::Identity, expectedProjectionMatrix2, false, true, false);
+    }
+
+    executeScene();
+}
+
+TEST_F(ARenderExecutor, ResetsCachedRenderStatesAfterClearingRenderTargets)
+{
+    const RenderPassHandle pass1 = createRenderPassWithCamera(ECameraProjectionType_Perspective);
+    const RenderableHandle renderable1 = createTestRenderable(createTestDataInstance(), createRenderGroup(pass1));
+
+    const RenderPassHandle pass2 = createRenderPassWithCamera(ECameraProjectionType_Perspective);
+    const RenderableHandle renderable2 = createTestRenderable(createTestDataInstance(), createRenderGroup(pass2));
+    const RenderTargetHandle targetHandle2 = createRenderTarget(17, 21);
+    scene.setRenderPassRenderTarget(pass2, targetHandle2);
+
+    scene.setRenderPassRenderOrder(pass1, 0);
+    scene.setRenderPassRenderOrder(pass2, 1);
+
+    updateScenes();
+
+    const DeviceResourceHandle renderTargetDeviceHandle2 = resourceManager.getRenderTargetDeviceHandle(targetHandle2, scene.getSceneId());
+    const Matrix44f projMatrix = CameraMatrixHelper::ProjectionMatrix(ProjectionParams::Perspective(fakeFieldOfView, fakeAspectRatio, fakeNearPlane, fakeFarPlane));
+
+    {
+        InSequence seq;
+
+        expectActivateFramebufferRenderTarget();
+        expectFrameRenderCommands(renderable1, Matrix44f::Identity, Matrix44f::Identity, Matrix44f::Identity, projMatrix);
+        expectActivateRenderTarget(renderTargetDeviceHandle2, false);
+        expectClearRenderTarget();
+        //render states are set again but shader and index buffer do not have to be set again
+        expectFrameRenderCommands(renderable2, Matrix44f::Identity, Matrix44f::Identity, Matrix44f::Identity, projMatrix, false, true, false);
     }
 
     executeScene();
@@ -803,6 +849,8 @@ TEST_F(ARenderExecutor, RenderStatesAppliedForEachRenderableIfDifferent)
     const RenderStateHandle state1 = scene.getRenderable(renderable1).renderState;
     const RenderStateHandle state2 = scene.getRenderable(renderable2).renderState;
 
+    scene.setRenderStateScissorTest(state1, EScissorTest::Disabled, {});
+    scene.setRenderStateScissorTest(state2, EScissorTest::Enabled, {});
     scene.setRenderStateDepthWrite(state1, EDepthWrite::Enabled);
     scene.setRenderStateDepthWrite(state2, EDepthWrite::Disabled);
     scene.setRenderStateColorWriteMask(state1, EColorWriteFlag_Red);

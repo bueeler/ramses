@@ -9,9 +9,8 @@
 #ifndef RAMSES_PLATFORMENVIRONMENTVARIABLES_H
 #define RAMSES_PLATFORMENVIRONMENTVARIABLES_H
 
-#include <ramses-capu/os/EnvironmentVariables.h>
-#include "Collections/HashMap.h"
 #include "Collections/String.h"
+#include <stdlib.h>
 
 namespace ramses_internal
 {
@@ -19,6 +18,7 @@ namespace ramses_internal
     {
     public:
         static Bool get(const String& key, String& value);
+        static bool HasEnvVar(const String& key);
 
         static void SetEnvVar(const String& key, const String& value);
         static inline void UnsetEnvVar(const String& key);
@@ -27,7 +27,23 @@ namespace ramses_internal
     inline
     Bool PlatformEnvironmentVariables::get(const String& key, String& value)
     {
-        return ramses_capu::EnvironmentVariables::get(key, value);
+#ifdef _MSC_VER
+        char* envValue = 0;
+        errno_t err = _dupenv_s(&envValue, 0, key.c_str());
+        bool found = (err == 0 && envValue != 0);
+        value = envValue;
+        free(envValue);
+        return found;
+#else
+        char * env = getenv(key.c_str());
+        value = env;
+        return (0 != env);
+#endif
+    }
+
+    inline bool PlatformEnvironmentVariables::HasEnvVar(const String& key)
+    {
+        return getenv(key.c_str()) != nullptr;
     }
 
     inline

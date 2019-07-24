@@ -94,7 +94,7 @@ namespace ramses_internal
         EXPECT_TRUE(ArgumentBool(parser, "", "v", false));
         EXPECT_EQ(String("192.168.1.1"), String(ArgumentString(parser, "ip", "daemon-ip", "localhost")));
         StringVector files = parser.getNonOptions();
-        EXPECT_TRUE(files.contains("my/test/scene"));
+        EXPECT_TRUE(contains_c(files, "my/test/scene"));
     }
 
     TEST(CommandLineParserTest, fileTargetAtTheEnd)
@@ -108,7 +108,7 @@ namespace ramses_internal
         UNUSED(valueB);
 
         StringVector files = parser.getNonOptions();
-        EXPECT_TRUE(files.contains("my/test/scene"));
+        EXPECT_TRUE(contains_c(files, "my/test/scene"));
         EXPECT_EQ(1U, files.size());
     }
 
@@ -123,8 +123,8 @@ namespace ramses_internal
         UNUSED(valueB);
 
         StringVector files = parser.getNonOptions();
-        EXPECT_TRUE(files.contains("my/test/scene"));
-        EXPECT_TRUE(files.contains("otherFile"));
+        EXPECT_TRUE(contains_c(files, "my/test/scene"));
+        EXPECT_TRUE(contains_c(files, "otherFile"));
         EXPECT_EQ(2U, files.size());
     }
 
@@ -164,9 +164,9 @@ namespace ramses_internal
         EXPECT_TRUE(ArgumentBool(parser, "", "longOptioN", false));
 
         StringVector files = parser.getNonOptions();
-        EXPECT_TRUE(files.contains("testfileOne"));
-        EXPECT_TRUE(files.contains("secondFile"));
-        EXPECT_TRUE(files.contains("thirdfile"));
+        EXPECT_TRUE(contains_c(files, "testfileOne"));
+        EXPECT_TRUE(contains_c(files, "secondFile"));
+        EXPECT_TRUE(contains_c(files, "thirdfile"));
         EXPECT_EQ(3U, files.size());
     }
 
@@ -254,6 +254,30 @@ namespace ramses_internal
 
         const UInt32 valA = ArgumentUInt32(parser, "a", "", 0);
         EXPECT_EQ(4294967295u, valA);
+
+        EXPECT_TRUE(parser.getNonOptions().empty());
+    }
+
+    TEST(CommandLineParserTest, Vec3Arguments)
+    {
+        const Char* params[] = { "myExe", "-correct", "[5,6,7]", "-noValue", "-overflow", "[6,7,8,9]", "-withoutParentheses", "5,6,7", "-wrong", "[5,6]", "-verywrong", "[5,6,7" };
+        CommandLineParser parser(12, params);
+
+        const Vector3 defaultValue(1, 2, 3);
+        const Vector3 correct           = ArgumentVec3(parser, "correct", "", defaultValue);
+        const Vector3 noValue           = ArgumentVec3(parser, "noValue", "", defaultValue);
+        const Vector3 overflow          = ArgumentVec3(parser, "overflow", "", defaultValue);
+        const Vector3 withoutParentheses= ArgumentVec3(parser, "withoutParentheses", "", defaultValue);
+        const Vector3 wrong             = ArgumentVec3(parser, "wrong", "", defaultValue);
+        const Vector3 verywrong         = ArgumentVec3(parser, "verywrong", "", defaultValue);
+
+        EXPECT_EQ(Vector3(5, 6, 7), correct);
+        EXPECT_EQ(defaultValue, noValue);
+        EXPECT_EQ(defaultValue, overflow);
+        EXPECT_EQ(defaultValue, withoutParentheses);
+        EXPECT_EQ(defaultValue, wrong);
+        EXPECT_EQ(defaultValue, verywrong);
+
 
         EXPECT_TRUE(parser.getNonOptions().empty());
     }

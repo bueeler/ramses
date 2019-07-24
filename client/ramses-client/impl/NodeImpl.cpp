@@ -147,7 +147,7 @@ namespace ramses
 
     status_t NodeImpl::removeChild(NodeImpl& node)
     {
-        const auto it = m_children.find(&node);
+        const auto it = ramses_internal::find_c(m_children, &node);
         if (it == m_children.end())
         {
             return node.addErrorEntry("Node::removeChild failed, child not found.");
@@ -240,14 +240,14 @@ namespace ramses
     status_t NodeImpl::getModelMatrix(float(&modelMatrix)[16]) const
     {
         const ramses_internal::Matrix44f mat44 = getIScene().updateMatrixCache(ramses_internal::ETransformationMatrixType_World, m_nodeHandle);
-        ramses_internal::PlatformMemory::Copy(modelMatrix, mat44.getRawData(), sizeof(modelMatrix));
+        ramses_internal::PlatformMemory::Copy(modelMatrix, mat44.data, sizeof(modelMatrix));
         return StatusOK;
     }
 
     status_t NodeImpl::getInverseModelMatrix(float(&inverseModelMatrix)[16]) const
     {
         const ramses_internal::Matrix44f mat44 = getIScene().updateMatrixCache(ramses_internal::ETransformationMatrixType_Object, m_nodeHandle);
-        ramses_internal::PlatformMemory::Copy(inverseModelMatrix, mat44.getRawData(), sizeof(inverseModelMatrix));
+        ramses_internal::PlatformMemory::Copy(inverseModelMatrix, mat44.data, sizeof(inverseModelMatrix));
         return StatusOK;
     }
 
@@ -271,7 +271,7 @@ namespace ramses
         return getSceneImpl().getObjectRegistry().isNodeDirty(*this);
     }
 
-    void NodeImpl::removeChildInternally(NodeVector::Iterator childIt)
+    void NodeImpl::removeChildInternally(NodeVector::iterator childIt)
     {
         NodeImpl& child = **childIt;
 

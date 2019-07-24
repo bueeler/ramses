@@ -60,9 +60,10 @@ namespace ramses_internal
         /**
          * Trigger the System-Compositor (wayland, X11, android, ...) to take a screenshot and store it in a file.
          * @param fileName File name including path, for storing the screenshot.
+         * @param sceenIviId IVI screen id used for screenshot
          * @return "true", if the screenshot was successfully made.
          */
-        virtual Bool doScreenshotOfAllScreens(const String& fileName) = 0;
+        virtual Bool doScreenshot(const String& fileName, int32_t screenIviId) = 0;
 
         /**
          * @brief Connect an IVI surface with a layer
@@ -93,6 +94,16 @@ namespace ramses_internal
          * @return \c true on success, \c false otherwise
          */
         virtual Bool destroySurface(WaylandIviSurfaceId surfaceId) = 0;
+
+        /**
+         * @brief changes the visibility setting of a layer
+         *
+         * @param layerId The id identifying the layer.
+         * @param visibility If \c true the layer will be set to visible, otherwise invisible.
+         *
+         * @return \c true on success \c false otherwise
+         */
+        virtual Bool setLayerVisibility(WaylandIviLayerId layerId, Bool visibility) = 0;
 
     };
 }

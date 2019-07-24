@@ -41,6 +41,12 @@ namespace ramses_internal
         ECommunicationSystemTestConfiguration_LimitedClientInstances2
     };
 
+    enum class EServiceType
+    {
+        Ramses,
+        Dcsm
+    };
+
     // better output from gtest
     void PrintTo(const ECommunicationSystemType& type, std::ostream* os);
 
@@ -64,7 +70,7 @@ namespace ramses_internal
     class CommunicationSystemTestState
     {
     public:
-        explicit CommunicationSystemTestState(ECommunicationSystemType type);
+        explicit CommunicationSystemTestState(ECommunicationSystemType type, EServiceType serviceType);
         virtual ~CommunicationSystemTestState();
 
         void connectAll();
@@ -76,10 +82,11 @@ namespace ramses_internal
 
         void sendEvent();
 
-        static Vector<ECommunicationSystemType> GetAvailableCommunicationSystemTypes(uint32_t mask = ECommunicationSystemType_All);
+        static std::vector<ECommunicationSystemType> GetAvailableCommunicationSystemTypes(uint32_t mask = ECommunicationSystemType_All);
         ECommunicationSystemType communicationSystemType;
+        EServiceType serviceType;
         AsyncEventCounter event;
-        Vector<CommunicationSystemTestWrapper*> knownCommunicationSystems;
+        std::vector<CommunicationSystemTestWrapper*> knownCommunicationSystems;
     };
 
     ACTION_P(SendHandlerCalledEvent, pointerToClassWithSendEventMethod)

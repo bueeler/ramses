@@ -18,6 +18,10 @@
 #include "ramses-framework-api/RamsesFrameworkConfig.h"
 #include "Ramsh/RamshFactory.h"
 #include "PlatformAbstraction/synchronized_clock.h"
+#include "DcsmProviderImpl.h"
+#include "ramses-framework-api/DcsmProvider.h"
+#include "DcsmConsumerImpl.h"
+#include "ramses-framework-api/DcsmConsumer.h"
 
 namespace ramses
 {
@@ -35,29 +39,49 @@ namespace ramses
         , m_threadWatchdogConfig(config.m_watchdogConfig)
         // NOTE: ThreadingSystem must always be constructed after CommunicationSystem
         , m_threadStrategy(3, config.m_watchdogConfig)
-        , resourceComponent(m_threadStrategy.e, m_participantAddress.getParticipantId(), *m_communicationSystem, m_communicationSystem->getConnectionStatusUpdateNotifier(),
+        , m_resourceComponent(m_threadStrategy.e, m_participantAddress.getParticipantId(), *m_communicationSystem, m_communicationSystem->getRamsesConnectionStatusUpdateNotifier(),
             m_statisticCollection, m_frameworkLock, config.getMaximumTotalBytesForAsyncResourceLoading())
-        , scenegraphComponent(m_participantAddress.getParticipantId(), *m_communicationSystem, m_communicationSystem->getConnectionStatusUpdateNotifier(), m_frameworkLock)
+        , m_scenegraphComponent(m_participantAddress.getParticipantId(), *m_communicationSystem, m_communicationSystem->getRamsesConnectionStatusUpdateNotifier(), m_frameworkLock)
+        , m_dcsmComponent(m_participantAddress.getParticipantId(), *m_communicationSystem, m_communicationSystem->getDcsmConnectionStatusUpdateNotifier(), m_frameworkLock)
         , m_ramshCommandLogConnectionInformation(*m_communicationSystem)
+        , m_ramshCommandLogDcsmInformation(m_dcsmComponent)
     {
         m_ramsh->start();
         m_ramsh->add(m_ramshCommandLogConnectionInformation);
+        m_ramsh->add(m_ramshCommandLogDcsmInformation);
         m_periodicLogger.registerPeriodicLogSupplier(m_communicationSystem.get());
+        m_periodicLogger.registerPeriodicLogSupplier(&m_dcsmComponent);
+    }
+
+    RamsesFrameworkImpl::~RamsesFrameworkImpl()
+    {
+        LOG_INFO(CONTEXT_CLIENT, "RamsesFramework::~RamsesFramework: guid " << m_participantAddress.getParticipantId() << ", wasConnected " << m_connected);
+        if (m_connected)
+        {
+            disconnect();
+        }
+        m_periodicLogger.removePeriodicLogSupplier(m_communicationSystem.get());
+        m_periodicLogger.removePeriodicLogSupplier(&m_dcsmComponent);
     }
 
     ramses_internal::ResourceComponent& RamsesFrameworkImpl::getResourceComponent()
     {
-        return resourceComponent;
+        return m_resourceComponent;
     }
 
     ramses_internal::SceneGraphComponent& RamsesFrameworkImpl::getScenegraphComponent()
     {
-        return scenegraphComponent;
+        return m_scenegraphComponent;
     }
 
-    ramses_internal::IConnectionStatusUpdateNotifier& RamsesFrameworkImpl::getConnectionStatusUpdateNotifier()
+    ramses_internal::DcsmComponent& RamsesFrameworkImpl::getDcsmComponent()
     {
-        return m_communicationSystem->getConnectionStatusUpdateNotifier();
+        return m_dcsmComponent;
+    }
+
+    ramses_internal::IConnectionStatusUpdateNotifier& RamsesFrameworkImpl::getRamsesConnectionStatusUpdateNotifier()
+    {
+        return m_communicationSystem->getRamsesConnectionStatusUpdateNotifier();
     }
 
     ramses_internal::ParticipantIdentifier RamsesFrameworkImpl::getParticipantAddress() const
@@ -95,16 +119,6 @@ namespace ramses
         return m_statisticCollection;
     }
 
-    RamsesFrameworkImpl::~RamsesFrameworkImpl()
-    {
-        LOG_INFO(CONTEXT_CLIENT, "RamsesFramework::~RamsesFramework: guid " << m_participantAddress.getParticipantId() << ", wasConnected " << m_connected);
-        if (m_connected)
-        {
-            disconnect();
-        }
-        m_periodicLogger.removePeriodicLogSupplier(m_communicationSystem.get());
-    }
-
     ramses::status_t RamsesFrameworkImpl::connect()
     {
         if (m_connected)
@@ -135,13 +149,69 @@ namespace ramses
             return addErrorEntry("Not connected, cannot disconnect");
         }
 
-        scenegraphComponent.disconnectFromNetwork();
+        m_scenegraphComponent.disconnectFromNetwork();
         m_communicationSystem->disconnectServices();
 
         m_connected = false;
         LOG_INFO(CONTEXT_SMOKETEST, "RamsesFrameworkImpl::disconnect end of disconnect");
         LOG_INFO(CONTEXT_FRAMEWORK, "RamsesFrameworkImpl::disconnect: done ok");
 
+        return StatusOK;
+    }
+
+    DcsmProvider* RamsesFrameworkImpl::createDcsmProvider()
+    {
+        LOG_INFO(ramses_internal::CONTEXT_FRAMEWORK, "RamsesFramework::createDcsmProvider for " << m_participantAddress.getParticipantId() << " / " << m_participantAddress.getParticipantName());
+
+        // TODO(tobias) check if creation allowed based on m_participantAddress
+
+        if (m_dcsmProvider)
+        {
+            addErrorEntry("RamsesFramework::createDcsmProvider: can only create one provider per framework");
+            return nullptr;
+        }
+        DcsmProviderImpl* impl = new DcsmProviderImpl(getDcsmComponent());
+        m_dcsmProvider.reset(new DcsmProvider(*impl));
+        return m_dcsmProvider.get();
+    }
+
+    status_t RamsesFrameworkImpl::destroyDcsmProvider(const DcsmProvider& provider)
+    {
+        LOG_INFO(ramses_internal::CONTEXT_FRAMEWORK, "RamsesFramework::destroyDcsmProvider for " << m_participantAddress.getParticipantId() << " / " << m_participantAddress.getParticipantName());
+
+        if (!m_dcsmProvider || m_dcsmProvider.get() != &provider)
+        {
+            return addErrorEntry("RamsesFramework::destroyDcsmProvider: provider does not belong to this framework");
+        }
+        m_dcsmProvider.reset();
+        return StatusOK;
+    }
+
+    DcsmConsumer* RamsesFrameworkImpl::createDcsmConsumer()
+    {
+        LOG_INFO(ramses_internal::CONTEXT_FRAMEWORK, "RamsesFramework::createDcsmConsumer for " << m_participantAddress.getParticipantId() << " / " << m_participantAddress.getParticipantName());
+
+        // TODO(tobias) check if creation allowed based on m_participantAddress
+
+        if (m_dcsmConsumer)
+        {
+            addErrorEntry("RamsesFramework::createDcsmConsumer: can only create one consumer per framework");
+            return nullptr;
+        }
+        DcsmConsumerImpl* impl = new DcsmConsumerImpl(*this);
+        m_dcsmConsumer.reset(new DcsmConsumer(*impl));
+        return m_dcsmConsumer.get();
+    }
+
+    status_t RamsesFrameworkImpl::destroyDcsmConsumer(const DcsmConsumer& consumer)
+    {
+        LOG_INFO(ramses_internal::CONTEXT_FRAMEWORK, "RamsesFramework::destroyDcsmConsumer for " << m_participantAddress.getParticipantId() << " / " << m_participantAddress.getParticipantName());
+
+        if (!m_dcsmConsumer || m_dcsmConsumer.get() != &consumer)
+        {
+            return addErrorEntry("RamsesFramework::destroyDcsmConsumer: consumer does not belong to this framework");
+        }
+        m_dcsmConsumer.reset();
         return StatusOK;
     }
 
@@ -173,7 +243,7 @@ namespace ramses
         ramses_internal::ParticipantIdentifier participantAddress(myGuid, participantName);
 
         LOG_INFO(CONTEXT_FRAMEWORK, "Starting Ramses Client Application: " << participantAddress.getParticipantName() << " guid:" << participantAddress.getParticipantId());
-        const ramses_internal::ArgumentUInt32 periodicLogTimeout(parser, "plt", "periodicLogTimeout", 10);
+        const ramses_internal::ArgumentUInt32 periodicLogTimeout(parser, "plt", "periodicLogTimeout", uint32_t(PeriodicLogIntervalInSeconds));
 
         logEnvironmentVariableIfSet("XDG_RUNTIME_DIR");
         logEnvironmentVariableIfSet("LIBGL_DRIVERS_PATH");

@@ -19,7 +19,6 @@
 #include "SceneAPI/ECameraProjectionType.h"
 #include "SceneAPI/SceneId.h"
 #include "SceneAPI/DataSlot.h"
-#include "SceneAPI/SceneVersionTag.h"
 #include "SceneAPI/RenderState.h"
 #include "SceneAPI/EFixedSemantics.h"
 #include "SceneAPI/DataFieldInfo.h"
@@ -75,9 +74,6 @@ namespace ramses_internal
         virtual const String&               getName                         () const = 0;
         virtual SceneId                     getSceneId                      () const = 0;
 
-        virtual void                        setSceneVersionTag              (SceneVersionTag sceneVersionTag) = 0;
-        virtual SceneVersionTag             getSceneVersionTag              () const = 0;
-
         virtual void                        setAckFlushState                (bool /*state*/) {}
 
         virtual void                        preallocateSceneSize            (const SceneSizeInformation& sizeInfo) = 0;
@@ -107,17 +103,17 @@ namespace ramses_internal
         virtual void                        setRenderStateDrawMode          (RenderStateHandle stateHandle, EDrawMode drawMode) = 0;
         virtual void                        setRenderStateDepthFunc         (RenderStateHandle stateHandle, EDepthFunc func) = 0;
         virtual void                        setRenderStateDepthWrite        (RenderStateHandle stateHandle, EDepthWrite flag) = 0;
+        virtual void                        setRenderStateScissorTest       (RenderStateHandle stateHandle, EScissorTest flag, const RenderState::ScissorRegion& region) = 0;
         virtual void                        setRenderStateStencilFunc       (RenderStateHandle stateHandle, EStencilFunc func, UInt8 ref, UInt8 mask) = 0;
         virtual void                        setRenderStateStencilOps        (RenderStateHandle stateHandle, EStencilOp sfail, EStencilOp dpfail, EStencilOp dppass) = 0;
         virtual void                        setRenderStateColorWriteMask    (RenderStateHandle stateHandle, ColorWriteMask colorMask) = 0;
         virtual const RenderState&          getRenderState                  (RenderStateHandle stateHandle) const = 0;
 
         // Camera
-        virtual CameraHandle                allocateCamera                  (ECameraProjectionType type, NodeHandle nodeHandle, CameraHandle handle = CameraHandle::Invalid()) = 0;
+        virtual CameraHandle                allocateCamera                  (ECameraProjectionType type, NodeHandle nodeHandle, DataInstanceHandle viewportDataInstance, CameraHandle handle = CameraHandle::Invalid()) = 0;
         virtual void                        releaseCamera                   (CameraHandle cameraHandle) = 0;
         virtual Bool                        isCameraAllocated               (CameraHandle handle) const = 0;
         virtual UInt32                      getCameraCount                  () const = 0;
-        virtual void                        setCameraViewport               (CameraHandle cameraHandle, const Viewport& vp) = 0;
         virtual void                        setCameraFrustum                (CameraHandle cameraHandle, const Frustum& frustum) = 0;
         virtual const Camera&               getCamera                       (CameraHandle cameraHandle) const = 0;
 

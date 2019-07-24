@@ -76,7 +76,14 @@ namespace ramses_internal
         CameraHandle createTestCamera(const Vector3& translation = Vector3(0.0f), ECameraProjectionType camProjType = ECameraProjectionType_Renderer)
         {
             const NodeHandle cameraNode = m_sceneAllocator.allocateNode();
-            const CameraHandle camera = m_sceneAllocator.allocateCamera(camProjType, cameraNode);
+            const auto vpDataLayout = m_sceneAllocator.allocateDataLayout({ {EDataType_DataReference}, {EDataType_DataReference} });
+            const auto vpDataRefLayout = m_sceneAllocator.allocateDataLayout({ {EDataType_Vector2I} });
+            const auto vpDataInstance = m_sceneAllocator.allocateDataInstance(vpDataLayout);
+            const auto vpOffsetInstance = m_sceneAllocator.allocateDataInstance(vpDataRefLayout);
+            const auto vpSizeInstance = m_sceneAllocator.allocateDataInstance(vpDataRefLayout);
+            m_scene.setDataReference(vpDataInstance, Camera::ViewportOffsetField, vpOffsetInstance);
+            m_scene.setDataReference(vpDataInstance, Camera::ViewportSizeField, vpSizeInstance);
+            const CameraHandle camera = m_sceneAllocator.allocateCamera(camProjType, cameraNode, vpDataInstance);
 
             if (ECameraProjectionType_Perspective == camProjType)
             {
@@ -90,7 +97,8 @@ namespace ramses_internal
 
             if (ECameraProjectionType_Renderer != camProjType)
             {
-                m_scene.setCameraViewport(camera, { 0, 0, FakeVpWidth, FakeVpHeight });
+                m_scene.setDataSingleVector2i(vpOffsetInstance, DataFieldHandle{ 0 }, { 0, 0 });
+                m_scene.setDataSingleVector2i(vpSizeInstance, DataFieldHandle{ 0 }, { Int32(FakeVpWidth), Int32(FakeVpHeight) });
             }
 
             const TransformHandle cameraTransform = m_sceneAllocator.allocateTransform(cameraNode);
@@ -281,6 +289,29 @@ namespace ramses_internal
         m_executorState.viewportState.setState(Viewport());
         EXPECT_TRUE(m_executorState.viewportState.hasChanged());
         EXPECT_EQ(Viewport(), m_executorState.viewportState.getState());
+    }
+
+    TEST_F(ARenderExecutorInternalState, canResetCachedStates)
+    {
+        m_executorState.blendState.setState(BlendState());
+        m_executorState.depthStencilState.setState(DepthStencilState());
+        m_executorState.rasterizerState.setState(RasterizerState());
+
+        ASSERT_FALSE(m_executorState.blendState.hasChanged());
+        ASSERT_FALSE(m_executorState.depthStencilState.hasChanged());
+        ASSERT_FALSE(m_executorState.rasterizerState.hasChanged());
+
+        m_executorState.blendState.reset();
+        m_executorState.depthStencilState.reset();
+        m_executorState.rasterizerState.reset();
+
+        EXPECT_TRUE(m_executorState.blendState.hasChanged());
+        EXPECT_TRUE(m_executorState.depthStencilState.hasChanged());
+        EXPECT_TRUE(m_executorState.rasterizerState.hasChanged());
+
+        EXPECT_FALSE(m_executorState.blendState.getState()          != BlendState());
+        EXPECT_FALSE(m_executorState.depthStencilState.getState()   != DepthStencilState());
+        EXPECT_FALSE(m_executorState.rasterizerState.getState()     != RasterizerState());
     }
 
     TEST_F(ARenderExecutorInternalState, canIncrementAndGetRenderPassAndRenderableIdx)

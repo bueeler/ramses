@@ -25,9 +25,10 @@ namespace ramses
     class AAppearanceTest : public ::testing::Test
     {
     public:
+
         static void SetUpTestCase()
         {
-            sharedTestState = new TestEffectCreator;
+            sharedTestState = new TestEffectCreator(false);
         }
 
         static void TearDownTestCase()
@@ -62,7 +63,7 @@ namespace ramses
             info.texture2D = texture;
             info.textureCube = NULL;
 
-            TextureSampler* sampler = sharedTestState->getScene().createTextureSampler(ETextureAddressMode_Clamp, ETextureAddressMode_Clamp, ETextureSamplingMethod_Bilinear, *texture);
+            TextureSampler* sampler = sharedTestState->getScene().createTextureSampler(ETextureAddressMode_Clamp, ETextureAddressMode_Clamp, ETextureSamplingMethod_Nearest, ETextureSamplingMethod_Linear, *texture);
             EXPECT_TRUE(sampler != NULL);
             info.sampler = sampler;
         }
@@ -78,18 +79,25 @@ namespace ramses
             info.textureCube = texture;
             info.texture2D = NULL;
 
-            TextureSampler* sampler = sharedTestState->getScene().createTextureSampler(ETextureAddressMode_Clamp, ETextureAddressMode_Clamp, ETextureSamplingMethod_Bilinear, *texture);
+            TextureSampler* sampler = sharedTestState->getScene().createTextureSampler(ETextureAddressMode_Clamp, ETextureAddressMode_Clamp, ETextureSamplingMethod_Nearest, ETextureSamplingMethod_Linear, *texture);
             EXPECT_TRUE(sampler != NULL);
             info.sampler = sampler;
         }
 
         static TestEffectCreator* sharedTestState;
-
         Appearance* appearance;
     };
 
     TestEffectCreator* AAppearanceTest::sharedTestState = 0;
 
+    class AAppearanceTestWithSemanticUniforms : public AAppearanceTest
+    {
+    public:
+        static void SetUpTestCase()
+        {
+            sharedTestState = new TestEffectCreator(true);
+        }
+    };
 
     TEST_F(AAppearanceTest, getsTheSameEffectUsedToCreateIt)
     {
@@ -116,15 +124,15 @@ namespace ramses
     TEST_F(AAppearanceTest, setGetDepthWrite)
     {
         EDepthWrite depthWriteMode = EDepthWrite_Disabled;
-        EXPECT_EQ(StatusOK, appearance->setDepthWrite(true));
+        EXPECT_EQ(StatusOK, appearance->setDepthWrite(EDepthWrite_Enabled));
         EXPECT_EQ(StatusOK, appearance->getDepthWriteMode(depthWriteMode));
         EXPECT_EQ(EDepthWrite_Enabled, depthWriteMode);
 
-        EXPECT_EQ(StatusOK, appearance->setDepthWrite(false));
+        EXPECT_EQ(StatusOK, appearance->setDepthWrite(EDepthWrite_Disabled));
         EXPECT_EQ(StatusOK, appearance->getDepthWriteMode(depthWriteMode));
         EXPECT_EQ(EDepthWrite_Disabled, depthWriteMode);
 
-        EXPECT_EQ(StatusOK, appearance->setDepthWrite(true));
+        EXPECT_EQ(StatusOK, appearance->setDepthWrite(EDepthWrite_Enabled));
         EXPECT_EQ(StatusOK, appearance->getDepthWriteMode(depthWriteMode));
         EXPECT_EQ(EDepthWrite_Enabled, depthWriteMode);
     }
@@ -138,6 +146,24 @@ namespace ramses
         EXPECT_EQ(StatusOK, appearance->setDepthFunction(EDepthFunc_GreaterEqual));
         EXPECT_EQ(StatusOK, appearance->getDepthFunction(depthFunc));
         EXPECT_EQ(EDepthFunc_GreaterEqual, depthFunc);
+    }
+
+    TEST_F(AAppearanceTest, setGetScissorTest)
+    {
+        EScissorTest mode = EScissorTest_Disabled;
+        EXPECT_EQ(StatusOK, appearance->setScissorTest(EScissorTest_Enabled, 1, 2, 3u, 4u));
+        EXPECT_EQ(StatusOK, appearance->getScissorTestState(mode));
+        EXPECT_EQ(EScissorTest_Enabled, mode);
+
+        int16_t x = 0;
+        int16_t y = 0;
+        uint16_t width = 0u;
+        uint16_t height = 0;
+        EXPECT_EQ(StatusOK, appearance->getScissorRegion(x, y, width, height));
+        EXPECT_EQ(1, x);
+        EXPECT_EQ(2, y);
+        EXPECT_EQ(3u, width);
+        EXPECT_EQ(4u, height);
     }
 
     TEST_F(AAppearanceTest, setGetStencilFunc)
@@ -251,7 +277,7 @@ namespace ramses
 
         Texture2D* texture = sharedTestState->getClient().createTexture2D(1u, 1u, ETextureFormat_RGB8, 1u, &mipData, false);
         ASSERT_TRUE(texture != NULL);
-        TextureSampler* textureSampler = sharedTestState->getScene().createTextureSampler(ETextureAddressMode_Clamp, ETextureAddressMode_Clamp, ETextureSamplingMethod_Bilinear, *texture);
+        TextureSampler* textureSampler = sharedTestState->getScene().createTextureSampler(ETextureAddressMode_Clamp, ETextureAddressMode_Clamp, ETextureSamplingMethod_Nearest, ETextureSamplingMethod_Linear, *texture);
         ASSERT_TRUE(textureSampler != NULL);
 
         EXPECT_NE(StatusOK, appearance->setInputTexture(inputObject, *textureSampler));
@@ -272,7 +298,7 @@ namespace ramses
         ASSERT_TRUE(texture != NULL);
 
         ramses::Scene& anotherScene = *sharedTestState->getClient().createScene(1u);
-        TextureSampler* textureSampler = anotherScene.createTextureSampler(ETextureAddressMode_Clamp, ETextureAddressMode_Clamp, ETextureSamplingMethod_Bilinear, *texture);
+        TextureSampler* textureSampler = anotherScene.createTextureSampler(ETextureAddressMode_Clamp, ETextureAddressMode_Clamp, ETextureSamplingMethod_Nearest, ETextureSamplingMethod_Linear, *texture);
         ASSERT_TRUE(textureSampler != NULL);
 
         EXPECT_NE(StatusOK, appearance->setInputTexture(inputObject, *textureSampler));
@@ -290,7 +316,7 @@ namespace ramses
         const MipLevelData mipData(3u, texData);
         Texture2D* texture = sharedTestState->getClient().createTexture2D(1u, 1u, ETextureFormat_RGB8, 1u, &mipData, false);
         ASSERT_TRUE(texture != NULL);
-        TextureSampler* textureSampler = sharedTestState->getScene().createTextureSampler(ETextureAddressMode_Clamp, ETextureAddressMode_Clamp, ETextureSamplingMethod_Bilinear, *texture);
+        TextureSampler* textureSampler = sharedTestState->getScene().createTextureSampler(ETextureAddressMode_Clamp, ETextureAddressMode_Clamp, ETextureSamplingMethod_Nearest, ETextureSamplingMethod_Linear, *texture);
         ASSERT_TRUE(textureSampler != NULL);
 
         EXPECT_EQ(StatusOK, appearance->setInputTexture(inputObject, *textureSampler));
@@ -747,7 +773,7 @@ namespace ramses
 
         Texture2D* texture = sharedTestState->getClient().createTexture2D(1u, 1u, ETextureFormat_RGB8, 1u, &mipData, false);
         ASSERT_TRUE(texture != NULL);
-        TextureSampler* textureSampler = sharedTestState->getScene().createTextureSampler(ETextureAddressMode_Clamp, ETextureAddressMode_Clamp, ETextureSamplingMethod_Bilinear, *texture);
+        TextureSampler* textureSampler = sharedTestState->getScene().createTextureSampler(ETextureAddressMode_Clamp, ETextureAddressMode_Clamp, ETextureSamplingMethod_Nearest, ETextureSamplingMethod_Linear, *texture);
         ASSERT_TRUE(textureSampler != NULL);
 
         EXPECT_EQ(StatusOK, appearance->setInputTexture(inputObject, *textureSampler));
@@ -771,7 +797,7 @@ namespace ramses
 
         TextureCube* texture = sharedTestState->getClient().createTextureCube(1u, ETextureFormat_RGB8, 1u, &mipData, false);
         ASSERT_TRUE(texture != NULL);
-        TextureSampler* textureSampler = sharedTestState->getScene().createTextureSampler(ETextureAddressMode_Clamp, ETextureAddressMode_Clamp, ETextureSamplingMethod_Bilinear, *texture);
+        TextureSampler* textureSampler = sharedTestState->getScene().createTextureSampler(ETextureAddressMode_Clamp, ETextureAddressMode_Clamp, ETextureSamplingMethod_Linear, ETextureSamplingMethod_Linear, *texture);
         ASSERT_TRUE(textureSampler != NULL);
 
         EXPECT_EQ(StatusOK, appearance->setInputTexture(inputObject, *textureSampler));
@@ -870,7 +896,7 @@ namespace ramses
         EXPECT_NE(StatusOK, appearance->bindInput(inputObject, *dataObject));
     }
 
-    TEST_F(AAppearanceTest, failsToBindDataObjectIfInputHasSemantics)
+    TEST_F(AAppearanceTestWithSemanticUniforms, failsToBindDataObjectIfInputHasSemantics)
     {
         UniformInput inputObject;
         EXPECT_EQ(StatusOK, sharedTestState->effect->findUniformInput("matrix44fInput", inputObject));

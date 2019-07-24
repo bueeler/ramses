@@ -66,7 +66,6 @@
 #include "Utils/BinaryFileInputStream.h"
 #include "Utils/LogContext.h"
 #include "Utils/File.h"
-#include "Collections/ConstString.h"
 #include "Collections/IInputStream.h"
 #include "Collections/String.h"
 #include "Collections/HashMap.h"
@@ -186,7 +185,7 @@ namespace ramses
     status_t RamsesClientImpl::destroy(Scene& scene)
     {
         ramses_internal::PlatformGuard g(m_clientLock);
-        SceneVector::Iterator iter = m_scenes.find(&scene);
+        SceneVector::iterator iter = ramses_internal::find_c(m_scenes, &scene);
         if (iter != m_scenes.end())
         {
             m_scenes.erase(iter);
@@ -646,7 +645,7 @@ namespace ramses
         uint32_t typesCount = 0u;
         SerializationHelper::DeserializeNumberOfObjectTypes(inputStream, totalCount, typesCount);
 
-        typedef ramses_internal::Vector<ResourceVector> ResourcesPerType;
+        typedef std::vector<ResourceVector> ResourcesPerType;
         ResourcesPerType resourcesPerType(typesCount);
         m_appLogic.reserveResourceCount(totalCount);
 
@@ -815,7 +814,7 @@ namespace ramses
     }
 
     Scene* RamsesClientImpl::prepareSceneAndResourcesFromFiles(const char* caller, const ramses_internal::String& sceneFilename,
-        const ramses_internal::Vector<ramses_internal::String>& resourceFilenames, ramses_internal::Vector<ResourceLoadStatus>& resourceloadStatus)
+        const std::vector<ramses_internal::String>& resourceFilenames, std::vector<ResourceLoadStatus>& resourceloadStatus)
     {
         LOG_TRACE(ramses_internal::CONTEXT_CLIENT, "RamsesClient::" << caller << ": Reading resources from files");
         bool allResourcesLoadedSuccessfully = true;
@@ -867,7 +866,7 @@ namespace ramses
     Scene* RamsesClientImpl::loadSceneFromFile(const char* fileName, const ResourceFileDescriptionSet& resourceFileInformation)
     {
         const ramses_internal::UInt64 start = ramses_internal::PlatformTime::GetMillisecondsMonotonic();
-        ramses_internal::Vector<ResourceLoadStatus> resourceLoadStatus;
+        std::vector<ResourceLoadStatus> resourceLoadStatus;
         Scene* scene = prepareSceneAndResourcesFromFiles("loadSceneFromFile", fileName, resourceFileInformation.impl->getFilenames(), resourceLoadStatus);
         if (!scene)
         {
@@ -957,7 +956,7 @@ namespace ramses
 
     status_t RamsesClientImpl::loadResourcesAsync(const ResourceFileDescription& fileDescription)
     {
-        ramses_internal::Vector<ramses_internal::String> filenames;
+        std::vector<ramses_internal::String> filenames;
         filenames.push_back(fileDescription.getFilename());
         LoadResourcesRunnable* task = new LoadResourcesRunnable(*this, filenames);
         m_loadFromFileTaskQueue.enqueue(*task);
@@ -992,8 +991,8 @@ namespace ramses
 
     status_t RamsesClientImpl::dispatchEvents(IClientEventHandler& clientEventHandler)
     {
-        ramses_internal::Vector<ResourceLoadStatus> localAsyncResourcesStatus;
-        ramses_internal::Vector<SceneLoadStatus> localAsyncSceneLoadStatus;
+        std::vector<ResourceLoadStatus> localAsyncResourcesStatus;
+        std::vector<SceneLoadStatus> localAsyncSceneLoadStatus;
         {
             ramses_internal::PlatformGuard g(m_clientLock);
             localAsyncResourcesStatus.swap(m_asyncResourceLoadStatusVec);
@@ -1004,10 +1003,12 @@ namespace ramses
         {
             if (resourceStatus.successful)
             {
+                LOG_INFO(ramses_internal::CONTEXT_CLIENT, "RamsesClient::dispatchEvents(resourceFileLoadSucceeded): " << resourceStatus.filename);
                 clientEventHandler.resourceFileLoadSucceeded(resourceStatus.filename.c_str());
             }
             else
             {
+                LOG_INFO(ramses_internal::CONTEXT_CLIENT, "RamsesClient::dispatchEvents(resourceFileLoadFailed): " << resourceStatus.filename);
                 clientEventHandler.resourceFileLoadFailed(resourceStatus.filename.c_str());
             }
         }
@@ -1021,13 +1022,14 @@ namespace ramses
                 const ramses_internal::UInt64 start = ramses_internal::PlatformTime::GetMillisecondsMonotonic();
                 finalizeLoadedScene(scene);
                 const ramses_internal::UInt64 end = ramses_internal::PlatformTime::GetMillisecondsMonotonic();
-                LOG_INFO(ramses_internal::CONTEXT_CLIENT, "RamsesClient::dispatchEvents: Synchronous postprocessing of scene loaded from '" <<
+                LOG_INFO(ramses_internal::CONTEXT_CLIENT, "RamsesClient::dispatchEvents(sceneFileLoadSucceeded): Synchronous postprocessing of scene loaded from '" <<
                          sceneStatus.sceneFilename << "' (sceneName: " << scene->getName() << ", sceneId " << scene->getSceneId() << ") in " << (end - start) << " ms");
 
                 clientEventHandler.sceneFileLoadSucceeded(sceneStatus.sceneFilename.c_str(), scene);
             }
             else
             {
+                LOG_INFO(ramses_internal::CONTEXT_CLIENT, "RamsesClient::dispatchEvents(sceneFileLoadFailed): " << sceneStatus.sceneFilename);
                 clientEventHandler.sceneFileLoadFailed(sceneStatus.sceneFilename.c_str());
             }
         }
@@ -1035,7 +1037,7 @@ namespace ramses
         return StatusOK;
     }
 
-    RamsesClientImpl::LoadResourcesRunnable::LoadResourcesRunnable(RamsesClientImpl& client, const ramses_internal::Vector<ramses_internal::String>& filenames)
+    RamsesClientImpl::LoadResourcesRunnable::LoadResourcesRunnable(RamsesClientImpl& client, const std::vector<ramses_internal::String>& filenames)
         : m_client(client)
         , m_filenames(filenames)
     {
@@ -1043,7 +1045,7 @@ namespace ramses
 
     void RamsesClientImpl::LoadResourcesRunnable::execute()
     {
-        ramses_internal::Vector<ResourceLoadStatus> localResults;
+        std::vector<ResourceLoadStatus> localResults;
         for (const auto& filename : m_filenames)
         {
             const status_t status = m_client.readResourcesFromFile(filename);
@@ -1060,7 +1062,7 @@ namespace ramses
         m_client.m_asyncResourceLoadStatusVec.insert(m_client.m_asyncResourceLoadStatusVec.end(), localResults.begin(), localResults.end());
     }
 
-    RamsesClientImpl::LoadSceneRunnable::LoadSceneRunnable(RamsesClientImpl& client, const ramses_internal::String& sceneFilename, const ramses_internal::Vector<ramses_internal::String>& resourceFilenames)
+    RamsesClientImpl::LoadSceneRunnable::LoadSceneRunnable(RamsesClientImpl& client, const ramses_internal::String& sceneFilename, const std::vector<ramses_internal::String>& resourceFilenames)
         : m_client(client)
         , m_sceneFilename(sceneFilename)
         , m_resourceFilenames(resourceFilenames)
@@ -1070,7 +1072,7 @@ namespace ramses
     void RamsesClientImpl::LoadSceneRunnable::execute()
     {
         const ramses_internal::UInt64 start = ramses_internal::PlatformTime::GetMillisecondsMonotonic();
-        ramses_internal::Vector<ResourceLoadStatus> localResourceLoadStatus;
+        std::vector<ResourceLoadStatus> localResourceLoadStatus;
         Scene* scene = m_client.prepareSceneAndResourcesFromFiles("loadSceneFromFileAsync", m_sceneFilename, m_resourceFilenames, localResourceLoadStatus);
         const ramses_internal::UInt64 end = ramses_internal::PlatformTime::GetMillisecondsMonotonic();
 

@@ -14,8 +14,10 @@
 
 namespace ramses_internal
 {
-    ConnectionStatusUpdateNotifier::ConnectionStatusUpdateNotifier(PlatformLock& frameworkLock)
-        : m_lock(frameworkLock)
+    ConnectionStatusUpdateNotifier::ConnectionStatusUpdateNotifier(const String& participantName, const String& usage, PlatformLock& frameworkLock)
+        : m_participantName(participantName)
+        , m_usage(usage)
+        , m_lock(frameworkLock)
     {
     }
 
@@ -36,7 +38,7 @@ namespace ramses_internal
     void ConnectionStatusUpdateNotifier::unregisterForConnectionUpdates(IConnectionStatusListener* listener)
     {
         PlatformGuard g(m_lock);
-        Vector<IConnectionStatusListener*>::Iterator positionToDelete = m_listeners.find(listener);
+        std::vector<IConnectionStatusListener*>::iterator positionToDelete = find_c(m_listeners, listener);
         if (positionToDelete != m_listeners.end())
         {
             m_listeners.erase(positionToDelete);
@@ -49,7 +51,7 @@ namespace ramses_internal
         assert(status == EConnectionStatus_Connected || status == EConnectionStatus_NotConnected);
         if (status == EConnectionStatus_Connected)
         {
-            LOG_INFO(CONTEXT_COMMUNICATION, "ConnectionStatusUpdateNotifier::doStatusUpdate: newParticipantHasConnected " << participant);
+            LOG_INFO(CONTEXT_COMMUNICATION, "ConnectionStatusUpdateNotifier(" << m_participantName << ":" << m_usage << ")::doStatusUpdate: newParticipantHasConnected " << participant);
             m_currentState.put(participant);
             for(auto listener : m_listeners)
             {
@@ -58,7 +60,7 @@ namespace ramses_internal
         }
         else
         {
-            LOG_INFO(CONTEXT_COMMUNICATION, "ConnectionStatusUpdateNotifier::doStatusUpdate: participantHasDisconnected " << participant);
+            LOG_INFO(CONTEXT_COMMUNICATION, "ConnectionStatusUpdateNotifier(" << m_participantName << ":" << m_usage << ")::doStatusUpdate: participantHasDisconnected " << participant);
             m_currentState.remove(participant);
             for (auto listener : m_listeners)
             {

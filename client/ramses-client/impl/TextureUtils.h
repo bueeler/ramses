@@ -260,14 +260,14 @@ namespace ramses
             switch (addressMode)
             {
             case ETextureAddressMode_Clamp:
-                return ramses_internal::EWrapMethod_Clamp;
+                return ramses_internal::EWrapMethod::Clamp;
             case ETextureAddressMode_Repeat:
-                return ramses_internal::EWrapMethod_Repeat;
+                return ramses_internal::EWrapMethod::Repeat;
             case ETextureAddressMode_Mirror:
-                return ramses_internal::EWrapMethod_RepeatMirrored;
+                return ramses_internal::EWrapMethod::RepeatMirrored;
             default:
                 assert(false);
-                return ramses_internal::EWrapMethod_Clamp;
+                return ramses_internal::EWrapMethod::Clamp;
             }
         }
 
@@ -275,11 +275,11 @@ namespace ramses
         {
             switch (addressMode)
             {
-            case ramses_internal::EWrapMethod_Clamp:
+            case ramses_internal::EWrapMethod::Clamp:
                 return ETextureAddressMode_Clamp;
-            case ramses_internal::EWrapMethod_Repeat:
+            case ramses_internal::EWrapMethod::Repeat:
                 return ETextureAddressMode_Repeat;
-            case ramses_internal::EWrapMethod_RepeatMirrored:
+            case ramses_internal::EWrapMethod::RepeatMirrored:
                 return ETextureAddressMode_Mirror;
             default:
                 assert(false);
@@ -314,22 +314,20 @@ namespace ramses
             switch (sampling)
             {
             case ETextureSamplingMethod_Nearest:
-                return ramses_internal::ESamplingMethod_Nearest;
-            case ETextureSamplingMethod_NearestWithMipmaps:
-                return ramses_internal::ESamplingMethod_NearestWithMipmaps;
-            case ETextureSamplingMethod_Bilinear:
-                return ramses_internal::ESamplingMethod_Bilinear;
-            case ETextureSamplingMethod_BilinearWithMipMaps:
-                return ramses_internal::ESamplingMethod_BilinearWithMipMaps;
-            case ETextureSamplingMethod_Trilinear:
-                return ramses_internal::ESamplingMethod_Trilinear;
-            case ETextureSamplingMethod_MinLinearMagNearest:
-                return ramses_internal::ESamplingMethod_MinLinearMagNearest;
-            case ETextureSamplingMethod_MinNearestMagLinear:
-                return ramses_internal::ESamplingMethod_MinNearestMagLinear;
+                return ramses_internal::ESamplingMethod::Nearest;
+            case ETextureSamplingMethod_Nearest_MipMapNearest:
+                return ramses_internal::ESamplingMethod::Nearest_MipMapNearest;
+            case ETextureSamplingMethod_Nearest_MipMapLinear:
+                return ramses_internal::ESamplingMethod::Nearest_MipMapLinear;
+            case ETextureSamplingMethod_Linear:
+                return ramses_internal::ESamplingMethod::Linear;
+            case ETextureSamplingMethod_Linear_MipMapNearest:
+                return ramses_internal::ESamplingMethod::Linear_MipMapNearest;
+            case ETextureSamplingMethod_Linear_MipMapLinear:
+                return ramses_internal::ESamplingMethod::Linear_MipMapLinear;
             default:
                 assert(false);
-                return ramses_internal::ESamplingMethod_Bilinear;
+                return ramses_internal::ESamplingMethod::Linear;
             }
         }
 
@@ -337,23 +335,21 @@ namespace ramses
         {
             switch (sampling)
             {
-            case ramses_internal::ESamplingMethod_Nearest:
+            case ramses_internal::ESamplingMethod::Nearest:
                 return ETextureSamplingMethod_Nearest;
-            case ramses_internal::ESamplingMethod_NearestWithMipmaps:
-                return ETextureSamplingMethod_NearestWithMipmaps;
-            case ramses_internal::ESamplingMethod_Bilinear:
-                return ETextureSamplingMethod_Bilinear;
-            case ramses_internal::ESamplingMethod_BilinearWithMipMaps:
-                return ETextureSamplingMethod_BilinearWithMipMaps;
-            case ramses_internal::ESamplingMethod_Trilinear:
-                return ETextureSamplingMethod_Trilinear;
-            case ramses_internal::ESamplingMethod_MinLinearMagNearest:
-                return ETextureSamplingMethod_MinLinearMagNearest;
-            case ramses_internal::ESamplingMethod_MinNearestMagLinear:
-                return ETextureSamplingMethod_MinNearestMagLinear;
+            case ramses_internal::ESamplingMethod::Nearest_MipMapNearest:
+                return ETextureSamplingMethod_Nearest_MipMapNearest;
+            case ramses_internal::ESamplingMethod::Nearest_MipMapLinear:
+                return ETextureSamplingMethod_Nearest_MipMapLinear;
+            case ramses_internal::ESamplingMethod::Linear:
+                return ETextureSamplingMethod_Linear;
+            case ramses_internal::ESamplingMethod::Linear_MipMapNearest:
+                return ETextureSamplingMethod_Linear_MipMapNearest;
+            case ramses_internal::ESamplingMethod::Linear_MipMapLinear:
+                return ETextureSamplingMethod_Linear_MipMapLinear;
             default:
                 assert(false);
-                return ETextureSamplingMethod_Bilinear;
+                return ETextureSamplingMethod_Linear;
             }
         }
 

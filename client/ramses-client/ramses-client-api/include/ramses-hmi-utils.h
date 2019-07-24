@@ -12,6 +12,7 @@
 #include "ramses-framework-api/RamsesFrameworkTypes.h"
 #include "ramses-framework-api/APIExport.h"
 #include "ramses-client-api/Scene.h"
+#include <string>
 
 namespace ramses
 {
@@ -102,13 +103,25 @@ namespace ramses
         /**
         * @brief Destructor for BoundingSphereCollection
         */
-        virtual ~BoundingSphereCollection();
+        ~BoundingSphereCollection();
 
-    private:
         /**
         * @brief Internal data
         */
         class BoundingSphereCollectionImpl& impl;
+
+        /**
+         * @brief Deleted copy constructor
+         * @param other unused
+         */
+        BoundingSphereCollection(const BoundingSphereCollection& other) = delete;
+
+        /**
+         * @brief Deleted copy assignment
+         * @param other unused
+         * @return unused
+         */
+        BoundingSphereCollection& operator=(const BoundingSphereCollection& other) = delete;
     };
 
     /**
@@ -139,6 +152,14 @@ namespace ramses
          * @param[in] scene the source scene
          */
         static void DumpUnrequiredSceneObjects(const Scene& scene);
+
+        /**
+         * @brief As RamsesHMIUtils::DumpUnrequiredSceneObjects but write to given stream.
+         *
+         * @param[in] scene the source scene
+         * @param[out] out stream to write to
+         */
+        static void DumpUnrequiredSceneObjectsToFile(const Scene& scene, std::ofstream& out);
     };
 }
 

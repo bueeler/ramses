@@ -46,12 +46,34 @@ namespace ramses
         */
         const char* getValidationReport(EValidationSeverity severity = EValidationSeverity_Info) const;
 
-    protected:
+        /**
+        * @brief Get the string description for a status provided by a RAMSES API function
+        *
+        * @param status Status returned by a RAMSES API function call
+        * @return If value refers to an existing status message, the string with text description for status is returned.
+        *         If no status message for value is available, unknown status message is returned.
+        */
+        const char* getStatusMessage(status_t status) const;
+
         /**
         * Stores internal data for implementation specifics of StatusObject.
         */
         class StatusObjectImpl& impl;
 
+        /**
+         * @brief Deleted copy constructor
+         * @param other unused
+         */
+        StatusObject(const StatusObject& other) = delete;
+
+        /**
+         * @brief Deleted copy assignment
+         * @param other unused
+         * @return unused
+         */
+        StatusObject& operator=(const StatusObject& other) = delete;
+
+    protected:
         /**
         * @brief Constructor for StatusObject.
         *
@@ -63,20 +85,6 @@ namespace ramses
         * @brief Destructor of the StatusObject
         */
         virtual ~StatusObject();
-
-    private:
-        /**
-        * @brief Copy constructor of StatusObject
-        */
-        StatusObject(const StatusObject& other);
-
-        /**
-        * @brief Assignment operator of StatusObject.
-        *
-        * @param[in] other Instance to assign from
-        * @return This instance after assignment
-        */
-        StatusObject& operator=(const StatusObject& other);
     };
 }
 

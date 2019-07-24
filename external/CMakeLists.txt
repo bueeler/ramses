@@ -110,6 +110,13 @@ IF (ramses-sdk_ALLOW_CUSTOM_FREETYPE AND NOT freetype_FOUND)
     set(OLD_CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
     set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_MODULE_PATH})
 
+    # Checking the availability of the functions below by harfbuzz does not work, because
+    # check_function_exists() checks against an existing platform freetype library.
+    # The freetype version from external does not support those functions, so set them to off manually:
+    set(HAVE_FT_GET_VAR_BLEND_COORDINATES OFF CACHE BOOL "" FORCE)
+    set(HAVE_FT_SET_VAR_BLEND_COORDINATES OFF CACHE BOOL "" FORCE)
+    set(HAVE_FT_DONE_MM_VAR OFF CACHE BOOL "" FORCE)
+
     ADD_SUBDIRECTORY(harfbuzz)
     ACME_INFO("+ harfbuzz")
 
@@ -126,7 +133,7 @@ IF (ramses-sdk_ALLOW_CUSTOM_FREETYPE AND NOT freetype_FOUND)
     target_include_directories(harfbuzz INTERFACE "harfbuzz/src" "${CMAKE_CURRENT_BINARY_DIR}/harfbuzz")
     ADD_SUBDIRECTORY(freetype)
 
-    target_include_directories(freetype INTERFACE "freetype/include" "${CMAKE_CURRENT_BINARY_DIR}/harfbuzz/src")
+    target_include_directories(freetype INTERFACE "freetype/include")
 
     # Manually install only static libs for static RAMSES builds
     # Not possible to use CMake targets because of complicated CMake scripts of each lib
@@ -173,11 +180,6 @@ ELSEIF()
 ENDIF()
 
 
-# Must be delayed, so that target can find dependent target like EGL etc.
-# For Open Source compliance, source code must remain under external/
-# Therefore subdirectory 'wayland-ivi-example-client' is included in toplevel cmake at the end
-#ADD_SUBDIRECTORY(wayland-ivi-example-client)
-
 # wayland ivi extension library
 IF (NOT ramses-sdk_DISABLE_WAYLAND_IVI_EXTENSION)
     FIND_PACKAGE(wayland-ivi-extension QUIET)
@@ -199,6 +201,32 @@ IF (NOT ramses-sdk_DISABLE_WAYLAND_IVI_EXTENSION)
         ENDIF()
     ENDIF()
 ENDIF()
+
+if (wayland-ivi-extension_FOUND OR TARGET wayland-ivi-extension)
+    # wayland ivi example/test application
+    ACME_MODULE(
+        #==========================================================================
+        # general module information
+        #==========================================================================
+        NAME                    ivi-gears
+        TYPE                    BINARY
+        ENABLE_INSTALL          ON
+
+        #==========================================================================
+        # files of this module
+        #==========================================================================
+        FILES_SOURCE            wayland-ivi-example-client/gears.c
+
+        #==========================================================================
+        # dependencies
+        #==========================================================================
+        DEPENDENCIES            EGL
+                                OpenGL
+                                wayland-client
+                                wayland-egl
+                                wayland-ivi-extension
+    )
+endif()
 
 # LZ4 de-/compression library
 OPTION(ramses-sdk_ALLOW_PLATFORM_LZ4 "Enable to search for platform provided lz4" ON)
@@ -228,3 +256,8 @@ ELSE()
     FILES_SOURCE            ${LZ4_DIR}/lib/*.c
     )
 ENDIF()
+
+
+add_library(asio INTERFACE)
+target_include_directories(asio INTERFACE asio/asio/include)
+ACME_INFO("+ asio")

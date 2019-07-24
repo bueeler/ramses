@@ -46,9 +46,14 @@ namespace ramses_internal
         return true;
     }
 
-    IConnectionStatusUpdateNotifier& ForwardingCommunicationSystem::getConnectionStatusUpdateNotifier()
+    IConnectionStatusUpdateNotifier& ForwardingCommunicationSystem::getRamsesConnectionStatusUpdateNotifier()
     {
-        return m_connectionStatusUpdateNotifier;
+        return m_ramsesConnectionStatusUpdateNotifier;
+    }
+
+    IConnectionStatusUpdateNotifier& ForwardingCommunicationSystem::getDcsmConnectionStatusUpdateNotifier()
+    {
+        return m_dcsmConnectionStatusUpdateNotifier;
     }
 
     bool ForwardingCommunicationSystem::sendSubscribeScene(const Guid& to, const SceneId& sceneId)
@@ -152,6 +157,78 @@ namespace ramses_internal
         return 1u;
     }
 
+    bool ForwardingCommunicationSystem::sendDcsmBroadcastOfferContent(ContentID contentID, Category category)
+    {
+        if (m_targetCommunicationSystem && m_targetCommunicationSystem->m_dcsmConsumerHandler)
+        {
+            m_targetCommunicationSystem->m_dcsmConsumerHandler->handleOfferContent(contentID, category, m_id);
+        }
+        return true;
+    }
+
+    bool ForwardingCommunicationSystem::sendDcsmOfferContent(const Guid& to, ContentID contentID, Category category)
+    {
+        if (m_targetCommunicationSystem && m_targetCommunicationSystem->m_dcsmConsumerHandler && to == m_targetCommunicationSystem->m_id)
+        {
+            m_targetCommunicationSystem->m_dcsmConsumerHandler->handleOfferContent(contentID, category, m_id);
+        }
+        return true;
+    }
+
+    bool ForwardingCommunicationSystem::sendDcsmContentReady(const Guid& to, ContentID contentID, ETechnicalContentType technicalContentType, TechnicalContentDescriptor technicalContentDescriptor)
+    {
+        if (m_targetCommunicationSystem && m_targetCommunicationSystem->m_dcsmConsumerHandler && to == m_targetCommunicationSystem->m_id)
+        {
+            m_targetCommunicationSystem->m_dcsmConsumerHandler->handleContentReady(contentID, technicalContentType, technicalContentDescriptor, m_id);
+        }
+        return true;
+    }
+
+    bool ForwardingCommunicationSystem::sendDcsmContentFocusRequest(const Guid& to, ContentID contentID)
+    {
+        if (m_targetCommunicationSystem && m_targetCommunicationSystem->m_dcsmConsumerHandler && to == m_targetCommunicationSystem->m_id)
+        {
+            m_targetCommunicationSystem->m_dcsmConsumerHandler->handleContentFocusRequest(contentID, m_id);
+        }
+        return true;
+    }
+
+    bool ForwardingCommunicationSystem::sendDcsmBroadcastRequestStopOfferContent(ContentID contentID)
+    {
+        if (m_targetCommunicationSystem && m_targetCommunicationSystem->m_dcsmConsumerHandler)
+        {
+            m_targetCommunicationSystem->m_dcsmConsumerHandler->handleRequestStopOfferContent(contentID, m_id);
+        }
+        return true;
+    }
+
+    bool ForwardingCommunicationSystem::sendDcsmBroadcastForceStopOfferContent(ContentID contentID)
+    {
+        if (m_targetCommunicationSystem && m_targetCommunicationSystem->m_dcsmConsumerHandler)
+        {
+            m_targetCommunicationSystem->m_dcsmConsumerHandler->handleForceStopOfferContent(contentID, m_id);
+        }
+        return true;
+    }
+
+    bool ForwardingCommunicationSystem::sendDcsmCanvasSizeChange(const Guid& to, ContentID contentID, SizeInfo sizeinfo, AnimationInformation ai)
+    {
+        if (m_targetCommunicationSystem && m_targetCommunicationSystem->m_dcsmProviderHandler && to == m_targetCommunicationSystem->m_id)
+        {
+            m_targetCommunicationSystem->m_dcsmProviderHandler->handleCanvasSizeChange(contentID, sizeinfo, ai, m_id);
+        }
+        return true;
+    }
+
+    bool ForwardingCommunicationSystem::sendDcsmContentStateChange(const Guid& to, ContentID contentID, EDcsmState status, SizeInfo si, AnimationInformation ai)
+    {
+        if (m_targetCommunicationSystem && m_targetCommunicationSystem->m_dcsmProviderHandler && to == m_targetCommunicationSystem->m_id)
+        {
+            m_targetCommunicationSystem->m_dcsmProviderHandler->handleContentStateChange(contentID, status, si, ai, m_id);
+        }
+        return true;
+    }
+
     CommunicationSendDataSizes ForwardingCommunicationSystem::getSendDataSizes() const
     {
         return CommunicationSendDataSizes{ std::numeric_limits<UInt32>::max(), std::numeric_limits<UInt32>::max(),
@@ -181,6 +258,16 @@ namespace ramses_internal
     void ForwardingCommunicationSystem::setSceneRendererServiceHandler(ISceneRendererServiceHandler* handler)
     {
         m_sceneRendererHandler = handler;
+    }
+
+    void ForwardingCommunicationSystem::setDcsmProviderServiceHandler(IDcsmProviderServiceHandler* handler)
+    {
+        m_dcsmProviderHandler = handler;
+    }
+
+    void ForwardingCommunicationSystem::setDcsmConsumerServiceHandler(IDcsmConsumerServiceHandler* handler)
+    {
+        m_dcsmConsumerHandler = handler;
     }
 
     void ForwardingCommunicationSystem::logConnectionInfo()

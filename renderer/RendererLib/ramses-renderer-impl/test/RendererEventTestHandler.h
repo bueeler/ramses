@@ -51,6 +51,7 @@ enum ERendererEventTestType
     ERendererEventTestType_SceneExpired,
     ERendererEventTestType_SceneRecoveredAfterExpiration,
     ERendererEventTestType_WindowClosed,
+    ERendererEventTestType_WindowResized,
     ERendererEventTestType_KeyEvent,
     ERendererEventTestType_MouseEvent
 };
@@ -80,7 +81,9 @@ struct RendererTestEvent
             && keyCode == other.keyCode
             && mouseEvent == other.mouseEvent
             && mousePosX == other.mousePosX
-            && mousePosY == other.mousePosY;
+            && mousePosY == other.mousePosY
+            && windowWidth == other.windowWidth
+            && windowHeight == other.windowHeight;
     }
 
     ERendererEventTestType eventType;
@@ -105,6 +108,8 @@ struct RendererTestEvent
     ramses::EMouseEvent mouseEvent;
     int32_t mousePosX;
     int32_t mousePosY;
+    uint32_t windowWidth;
+    uint32_t windowHeight;
 };
 
 class RendererEventTestHandler : public ramses::IRendererEventHandler
@@ -367,6 +372,16 @@ public:
         m_events.push_back(event);
     }
 
+    virtual void windowResized(ramses::displayId_t displayId, uint32_t width, uint32_t height)
+    {
+        RendererTestEvent event;
+        event.eventType = ERendererEventTestType_WindowResized;
+        event.displayId = displayId;
+        event.windowWidth = width;
+        event.windowHeight = height;
+        m_events.push_back(event);
+    }
+
     virtual void streamAvailabilityChanged(ramses::streamSource_t /*streamId*/, bool /*available*/)
     {
         // Tested elsewhere, no need to test here too
@@ -608,14 +623,14 @@ public:
         expectEvent(event);
     }
 
-    void expectSceneFlushed(ramses::sceneId_t sceneId, ramses::sceneVersionTag_t sceneVersionTag, ramses::ESceneResourceStatus resourceStatus)
+    void expectSceneFlushed(ramses::sceneId_t sceneId, ramses::sceneVersionTag_t sceneVersionTag, ramses::ESceneResourceStatus resourceStatus, const uint32_t withinLast = 1u)
     {
         RendererTestEvent event;
         event.eventType = ERendererEventTestType_SceneFlushed;
         event.sceneId = sceneId;
         event.sceneVersionTag = sceneVersionTag;
         event.resourceStatus = resourceStatus;
-        expectEvent(event);
+        expectEvent(event, withinLast);
     }
 
     void expectSceneExpired(ramses::sceneId_t sceneId)
@@ -642,6 +657,16 @@ public:
         expectEvent(event);
     }
 
+    void expectWindowResized(ramses::displayId_t displayId, uint32_t width, uint32_t height)
+    {
+        RendererTestEvent event;
+        event.eventType = ERendererEventTestType_WindowResized;
+        event.displayId = displayId;
+        event.windowWidth = width;
+        event.windowHeight = height;
+        expectEvent(event);
+    }
+
     void expectKeyEvent(ramses::displayId_t displayId, ramses::EKeyEvent keyEvent, uint32_t keyModifiers, ramses::EKeyCode keyCode)
     {
         RendererTestEvent event;
@@ -664,6 +689,11 @@ public:
         expectEvent(event);
     }
 
+    void expectNoEvent()
+    {
+        EXPECT_TRUE(m_events.empty());
+    }
+
 private:
     void expectEvent(const RendererTestEvent& event, const ramses_internal::UInt withinLast = 1u)
     {
@@ -676,7 +706,7 @@ private:
         }
     }
 
-    ramses_internal::Vector<RendererTestEvent> m_events;
+    std::vector<RendererTestEvent> m_events;
 };
 
 #endif

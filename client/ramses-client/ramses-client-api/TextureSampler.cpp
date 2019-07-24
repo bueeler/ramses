@@ -8,6 +8,13 @@
 
 // API
 #include "ramses-client-api/TextureSampler.h"
+#include "ramses-client-api/Texture2D.h"
+#include "ramses-client-api/Texture3D.h"
+#include "ramses-client-api/TextureCube.h"
+#include "ramses-client-api/Texture2DBuffer.h"
+#include "ramses-client-api/RenderBuffer.h"
+#include "ramses-client-api/StreamTexture.h"
+#include "APILoggingMacros.h"
 
 // internal
 #include "TextureSamplerImpl.h"
@@ -39,9 +46,14 @@ namespace ramses
         return impl.getWrapRMode();
     }
 
-    ETextureSamplingMethod TextureSampler::getSamplingMethod() const
+    ETextureSamplingMethod TextureSampler::getMinSamplingMethod() const
     {
-        return impl.getSamplingMethod();
+        return impl.getMinSamplingMethod();
+    }
+
+    ETextureSamplingMethod TextureSampler::getMagSamplingMethod() const
+    {
+        return impl.getMagSamplingMethod();
     }
 
     uint32_t TextureSampler::getAnisotropyLevel() const
@@ -52,5 +64,47 @@ namespace ramses
     ERamsesObjectType TextureSampler::getTextureType() const
     {
         return impl.getTextureType();
+    }
+
+    status_t TextureSampler::setTextureData(const Texture2D& dataSource)
+    {
+        const status_t status = impl.setTextureData(dataSource);
+        LOG_HL_CLIENT_API1(status, LOG_API_RAMSESOBJECT_STRING(dataSource));
+        return status;
+    }
+
+    status_t TextureSampler::setTextureData(const Texture3D& dataSource)
+    {
+        const status_t status = impl.setTextureData(dataSource);
+        LOG_HL_CLIENT_API1(status, LOG_API_RAMSESOBJECT_STRING(dataSource));
+        return status;
+    }
+
+    status_t TextureSampler::setTextureData(const TextureCube& dataSource)
+    {
+        const status_t status = impl.setTextureData(dataSource);
+        LOG_HL_CLIENT_API1(status, LOG_API_RAMSESOBJECT_STRING(dataSource));
+        return status;
+    }
+
+    status_t TextureSampler::setTextureData(const Texture2DBuffer& dataSource)
+    {
+        const status_t status = impl.setTextureData(dataSource);
+        LOG_HL_CLIENT_API1(status, LOG_API_RAMSESOBJECT_STRING(dataSource));
+        return status;
+    }
+
+    status_t TextureSampler::setTextureData(const RenderBuffer& dataSource)
+    {
+        const status_t status = impl.setTextureData(dataSource);
+        LOG_HL_CLIENT_API1(status, LOG_API_RAMSESOBJECT_STRING(dataSource));
+        return status;
+    }
+
+    status_t TextureSampler::setTextureData(const StreamTexture& dataSource)
+    {
+        const status_t status = impl.setTextureData(dataSource);
+        LOG_HL_CLIENT_API1(status, LOG_API_RAMSESOBJECT_STRING(dataSource));
+        return status;
     }
 }

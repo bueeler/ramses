@@ -50,8 +50,8 @@ RENDERER_MODULE_PER_CONFIG_STATIC(RendererLifecycleTests
 # TODO Violin/Alex add support for embedded compositing on a renderer with x11-backend
 ACME_MODULE(
     NAME                    EmbeddedCompositingTests-wayland-ivi-egl-es-3-0
-    TYPE                    TEST
-    TEST_SUFFIX             RNDSANDWICHTEST_SWRAST
+    TYPE                    BINARY
+    ENABLE_INSTALL          ON
 
     INCLUDE_BASE            RendererTestFramework
                             EmbeddedCompositingTests
@@ -78,6 +78,15 @@ ACME_MODULE(
                             WaylandUtilities
 )
 
+# TODO(tobias/mohamed) Disable test broken by newer ubuntu 18.04 packages
+if(TARGET EmbeddedCompositingTests-wayland-ivi-egl-es-3-0)
+    ACME_ADD_TEST(EmbeddedCompositingTests-wayland-ivi-egl-es-3-0
+        RNDSANDWICHTEST_SWRAST
+        --filterOut ShowStreamTextureAfterChangingSurfaceSize
+        )
+endif()
+
+
 # Tests which are supposed to be run with valgrind
 SET(VALGRIND_PLATFORMS
     "wayland-ivi-egl-es-3-0"
@@ -96,7 +105,7 @@ IF (ramses-sdk_BUILD_TESTS)
             #    MSAA and anisotropic filters are not strictly specified by OpenGL standard -> emulated driver don't support it
             #    ETC2 and ASTC compressed formats don't work with glTexSubImage()/glTexStorage() in the software emulated MESA drivers (reason: unknown, probably bug)
             #    16 bit float texture formats cause crash in docker environment
-            SET(SW_EMULATION_FILTER "AntiAliasingRendererTest_MSAA4:TextureTest_Texture2D_AnisotropicFilter:TextureTest_TextureCube_AnisotropicFilter:RenderBuffer_Msaa:TextureTest_Texture2D_Sampling_MinLinearMagNearest:TextureTest_Texture2D_Sampling_MinNearestMagLinear:TextureTest_Texture2D_Format_ETC2RGB:TextureTest_Texture2D_Format_ETC2RGBA:TextureTest_Texture2D_CompressedMipMap:TextureTest_Texture2D_Format_ASTC_RGBA_4x4:TextureTest_Texture2D_Format_ASTC_SRGB_ALPHA_4x4:RenderTarget_Format_R16F:RenderTarget_Format_RG16F:RenderTarget_Format_RGB16F:RenderTarget_Format_RGBA16F:RenderTarget_Format_RGB32F:TextureTest_Texture2D_Format_R16F:TextureTest_Texture2D_Format_RG16F:TextureTest_Texture2D_Format_RGB16F:TextureTest_Texture2D_Format_RGBA16F")
+            SET(SW_EMULATION_FILTER "AntiAliasingTest_MSAA4:TextureTest_Texture2D_AnisotropicFilter:TextureTest_TextureCube_AnisotropicFilter:RenderBuffer_Msaa:TextureTest_Texture2D_Sampling_MinLinearMagNearest:TextureTest_Texture2D_Sampling_MinNearestMagLinear:TextureTest_Texture2D_Format_ETC2RGB:TextureTest_Texture2D_Format_ETC2RGBA:TextureTest_Texture2D_CompressedMipMap:TextureTest_Texture2D_Format_ASTC_RGBA_4x4:TextureTest_Texture2D_Format_ASTC_SRGB_ALPHA_4x4:RenderTarget_Format_R16F:RenderTarget_Format_RG16F:RenderTarget_Format_RGB16F:RenderTarget_Format_RGBA16F:RenderTarget_Format_RGB32F:TextureTest_Texture2D_Format_R16F:TextureTest_Texture2D_Format_RG16F:TextureTest_Texture2D_Format_RGB16F:TextureTest_Texture2D_Format_RGBA16F")
 
             LIST(FIND VALGRIND_PLATFORMS ${TEST_PLATFORM} _INDEX)
             IF(NOT ${_INDEX} LESS 0)

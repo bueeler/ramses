@@ -11,6 +11,7 @@
 
 #include "SceneAPI/SceneId.h"
 #include "SceneAPI/SceneVersionTag.h"
+#include "RendererLib/StagingInfo.h"
 #include "Components/FlushTimeInformation.h"
 #include "Collections/HashMap.h"
 #include <chrono>
@@ -26,7 +27,7 @@ namespace ramses_internal
         SceneExpirationMonitor(const RendererScenes& scenes, RendererEventCollector& eventCollector);
         ~SceneExpirationMonitor();
 
-        void onFlushApplied(SceneId sceneId, FlushTime::Clock::time_point expirationTimestamp);
+        void onFlushApplied(SceneId sceneId, FlushTime::Clock::time_point expirationTimestamp, SceneVersionTag versionTag, UInt64 flushIndex);
         void onRendered(SceneId sceneId);
         void onHidden(SceneId sceneId);
         void checkExpiredScenes(FlushTime::Clock::time_point currentTime);
@@ -40,6 +41,7 @@ namespace ramses_internal
         {
             FlushTime::Clock::time_point ts = FlushTime::InvalidTimestamp;
             SceneVersionTag tag;
+            UInt64 internalIndex = std::numeric_limits<UInt64>::max();
         };
 
         struct SceneTimestamps

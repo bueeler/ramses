@@ -124,7 +124,7 @@ namespace ramses_internal
 
     void SystemCompositorController_Wayland_IVI::listIVISurfaces() const
     {
-        ramses_internal::Vector<uint32_t> sortedList;
+        std::vector<uint32_t> sortedList;
         sortedList.reserve(m_controllerSurfaces.count());
         for (auto controllerSurface : m_controllerSurfaces)
         {
@@ -195,58 +195,47 @@ namespace ramses_internal
         return true;
     }
 
-    Bool SystemCompositorController_Wayland_IVI::doScreenshotOfAllScreens(const String& fileName)
+    Bool SystemCompositorController_Wayland_IVI::doScreenshot(const String& fileName, int32_t screenIviId)
     {
-        // For each screen currently present, a screenshot will be saved under:
-        // <path>/<name>_<screen-id>.<extension>
-        // with <path>, <name> and <extension> extracted from fileName
-
-        StringOutputStream sStream;
-        const String       trimmedFileName = StringUtils::Trim(fileName.c_str());
-
-        LOG_INFO(CONTEXT_RENDERER, "SystemCompositorController_Wayland_IVI::screenshot fileName: " << trimmedFileName);
-        for (auto controllerScreen : m_controllerScreens)
+        // find screen with id
+        IVIControllerScreen* screen = nullptr;
+        if (screenIviId == -1)
         {
-            sStream.clear();
-
-            if (!trimmedFileName.startsWith("/"))
+            // expect single screen
+            if (m_controllerScreens.count() != 1)
             {
-                // store system compositor screenshot relative to renderer working directory.
-                const ramses_internal::String absoluteRendererDir =
-                    ramses_internal::FileUtils::GetCurrentWorkingDirectory().getPath();
-                sStream << absoluteRendererDir;
-                sStream << "/";
+                LOG_WARN(CONTEXT_RENDERER, "SystemCompositorController_Wayland_IVI::screenshot fileName " << fileName << " for screenId " << screenIviId <<
+                         " failed because found " << m_controllerScreens.count() << " screens");
+                return false;
             }
-
-            const Int32 positionOfDot = trimmedFileName.rfind('.');
-            if (-1 != positionOfDot) // rfind returns -1 if character is not present
-            {
-                sStream << trimmedFileName.substr(0, positionOfDot);
-                sStream << "_";
-                sStream << controllerScreen->getScreenId();
-                sStream << trimmedFileName.substr(positionOfDot, trimmedFileName.getLength() - positionOfDot);
-            }
-            else
-            {
-                sStream << trimmedFileName;
-                sStream << "_";
-                sStream << controllerScreen->getScreenId();
-            }
-
-            String outputFileName = String(sStream.c_str());
-            controllerScreen->takeScreenshot(outputFileName);
-            LOG_INFO(CONTEXT_RENDERER,
-                     "SystemCompositorController_Wayland_IVI::screenshot Saved screenshot for screen "
-                         << controllerScreen->getScreenId() << " as " << outputFileName);
+            screen = *m_controllerScreens.begin();
         }
+        else
+        {
+            // expect id exists
+            for (auto controllerScreen : m_controllerScreens)
+            {
+                if (controllerScreen->getScreenId() == static_cast<uint32_t>(screenIviId))
+                    screen = controllerScreen;
+            }
+            if (!screen)
+            {
+                LOG_WARN(CONTEXT_RENDERER, "SystemCompositorController_Wayland_IVI::screenshot fileName " << fileName << " for screenId " << screenIviId <<
+                         " failed because sceenId not found");
+                return false;
+            }
+        }
+
+        // trigger screenshot
+        screen->takeScreenshot(fileName);
+
         // ensure that all compositor operations have finished
         wl_display_roundtrip(m_display);
 
-        // this log message is required for the integration tests as a point in time where the screenshots have finished
-        LOG_INFO(CONTEXT_RENDERER,
-                 "SystemCompositorController_Wayland_IVI::screenshot Screenshots of all outputs finished ("
-                     << trimmedFileName << ")");
-        return false;
+        LOG_INFO(CONTEXT_RENDERER, "SystemCompositorController_Wayland_IVI::screenshot: Saved screenshot for screen "
+                 << screen->getScreenId() << " as " << fileName);
+
+        return true;
     }
 
     Bool SystemCompositorController_Wayland_IVI::addSurfaceToLayer(WaylandIviSurfaceId surfaceId,
@@ -352,6 +341,32 @@ namespace ramses_internal
         commitAndFlushControllerChanges();
 
         deleteControllerSurface(*controllerSurface);
+        return true;
+    }
+
+    Bool SystemCompositorController_Wayland_IVI::setLayerVisibility(WaylandIviLayerId layerId, Bool visibility)
+    {
+        LOG_INFO(CONTEXT_RENDERER,
+                 "SystemCompositorController_Wayland_IVI::setLayerVisibility layerId: "
+                     << layerId.getValue() << " visibility: " << visibility);
+
+        // Workaround for bug in compositor, create a new ivi_controller_layer here, otherwise the surface list of the
+        // layer can get wrong, when another application has also changed it in the meantime.
+        ivi_controller_layer* controllerLayer = ivi_controller_layer_create(m_controller, layerId.getValue(), 0, 0);
+        if (nullptr == controllerLayer)
+        {
+            LOG_ERROR(CONTEXT_RENDERER,
+                      "SystemCompositorController_Wayland_IVI::setLayerVisibility ivi_controller_layer_create "
+                      "failed, layer-id: "
+                          << layerId.getValue());
+            return false;
+        }
+
+        ivi_controller_layer_set_visibility(controllerLayer, (visibility) ? 1 : 0);
+
+        commitAndFlushControllerChanges();
+
+        ivi_controller_layer_destroy(controllerLayer, 0);
         return true;
     }
 

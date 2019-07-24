@@ -21,6 +21,7 @@ namespace ramses_internal
     {
     public:
         ASceneGraphProtocolSenderAndReceiverTest()
+            : AbstractSenderAndReceiverTest(EServiceType::Ramses)
         {
             receiver.setSceneRendererServiceHandler(&consumerHandler);
             receiver.setSceneProviderServiceHandler(&providerHandler);
@@ -74,7 +75,7 @@ namespace ramses_internal
         EXPECT_LE(numberMessagesReceived + 1, m_receiverTestWrapper->statisticCollection.statMessagesReceived.getCounterValue());
     }
 
-    TEST_P(ASceneGraphProtocolSenderAndReceiverTest, broadcastScenesBecameUnavailable)
+    TEST_P(ASceneGraphProtocolSenderAndReceiverTest, DISABLED_broadcastScenesBecameUnavailable)
     {
         uint32_t numberMessagesSent = m_senderTestWrapper->statisticCollection.statMessagesSent.getCounterValue();
         uint32_t numberMessagesReceived = m_receiverTestWrapper->statisticCollection.statMessagesReceived.getCounterValue();
@@ -221,7 +222,7 @@ namespace ramses_internal
             creator.allocateNode(0u, NodeHandle(123u + i));
         }
 
-        Vector<SceneActionCollection> receivedActionVectors;
+        std::vector<SceneActionCollection> receivedActionVectors;
         {
             PlatformGuard g(receiverExpectCallLock);
             EXPECT_CALL(consumerHandler, handleSceneActionList_rvr(sceneId, _, _, senderId)).Times(expectedNumberOfMessages).WillRepeatedly(DoAll(WithArgs<1>(INVOKE_APPEND_SCENEACTIONCOLLECTION(receivedActionVectors)), SendHandlerCalledEvent(this)));
@@ -268,7 +269,7 @@ namespace ramses_internal
             actions.write(data.get(), sizeOfSceneActionData);
         }
 
-        Vector<SceneActionCollection> receivedActionVectors;
+        std::vector<SceneActionCollection> receivedActionVectors;
         {
             PlatformGuard g(receiverExpectCallLock);
             EXPECT_CALL(consumerHandler, handleSceneActionList_rvr(sceneId, _, _, senderId)).Times(expectedNumberOfMessages).WillRepeatedly(DoAll(WithArgs<1>(INVOKE_APPEND_SCENEACTIONCOLLECTION(receivedActionVectors)), SendHandlerCalledEvent(this)));

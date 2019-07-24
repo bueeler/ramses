@@ -5,11 +5,11 @@
 #  License, v. 2.0. If a copy of the MPL was not distributed with this
 #  file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #  -------------------------------------------------------------------------
-import time
 
 from ramses_test_framework import test_classes
 from ramses_test_framework import log
 from ramses_test_framework import helper
+from ramses_test_framework import application
 from ramses_test_framework.ramses_test_extensions import with_ramses_process_check, IVI_Control
 from ramses_test_framework.targets.target import DEFAULT_TEST_LAYER
 from ramses_test_framework.targets.target import DEFAULT_TEST_SURFACE
@@ -53,6 +53,7 @@ class SystemCompositorControllerBase(test_classes.OnSelectedTargetsTest):
         self.checkThatApplicationWasStarted(self.rendererbackground)
         self.addCleanup(self.target.kill_application, self.rendererbackground)
         self.expectedSurfaceIds.add("{0}".format(self.testSurfaceIVIIds["rendererbackground"]))
+        self.rendererbackground.send_ramsh_command("skipUnmodifiedBuffers 0", waitForRendererConfirmation=True)
 
         # Create testLayer
         self.target.ivi_control.createLayer(self.testLayer, 1280, 480)
@@ -76,8 +77,8 @@ class SystemCompositorControllerBase(test_classes.OnSelectedTargetsTest):
         # The two ivi-gears are started before the renderer, to cover the case, that the scc gets the notification of the already
         # exisiting surfaces at it's startup time. In addition there is also a test which covers the case, when the renderer gets notified
         # about a newly created ivi-surface.
-        self.assertTrue(self.wlClient1.is_initialised(timeout=30))
-        self.assertTrue(self.wlClient2.is_initialised(timeout=30))
+        self.assertTrue(self.wlClient1.is_initialised(timeout=application.Application.DEFAULT_WAIT_FOR_MESSAGE_TIMEOUT))
+        self.assertTrue(self.wlClient2.is_initialised(timeout=application.Application.DEFAULT_WAIT_FOR_MESSAGE_TIMEOUT))
 
         # Start daemon
         self.ramsesDaemon = self.target.start_daemon()
@@ -89,6 +90,7 @@ class SystemCompositorControllerBase(test_classes.OnSelectedTargetsTest):
         self.checkThatApplicationWasStarted(self.renderer)
         self.addCleanup(self.save_application_output, self.renderer)
         self.addCleanup(self.target.kill_application, self.renderer)
+        self.renderer.send_ramsh_command("skipUnmodifiedBuffers 0", waitForRendererConfirmation=True)
 
         self.expectedSurfaceIds.add("{0}".format(self.testSurfaceIVIIds["renderer"]))
 
@@ -96,6 +98,9 @@ class SystemCompositorControllerBase(test_classes.OnSelectedTargetsTest):
         self.testClient = self.target.start_client("ramses-test-client", "-tn 10 -ts 0 -cz 5")
         self.checkThatApplicationWasStarted(self.testClient)
         self.addCleanup(self.target.kill_application, self.testClient)
+
+        # make sure renderer added its surface to layer before applying renderorder
+        self.renderer.wait_for_msg_in_stdout_from_beginning("IVIControllerSurface::HandleLayerCallback: surface {} added to layer".format(self.testSurfaceIVIIds["renderer"]), timeout=application.Application.DEFAULT_WAIT_FOR_MESSAGE_TIMEOUT)
 
         # Put renderer, and ivi-gears No. 1 & 2 on the test layer
         self.target.ivi_control.setLayerRenderorder(self.testLayer, "{0} {1} {2}".format(self.testSurfaceIVIIds["renderer"], self.testSurfaceIVIIds["wlClient1"], self.testSurfaceIVIIds["wlClient2"]))
@@ -135,4 +140,3 @@ class SystemCompositorControllerBase(test_classes.OnSelectedTargetsTest):
             if self.renderer.send_ramsh_command("scl", response_message=surfaceIdSearchRegEx, timeout=1):
                 return 1
         return 0
-

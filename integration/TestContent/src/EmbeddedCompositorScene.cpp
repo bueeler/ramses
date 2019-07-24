@@ -24,7 +24,7 @@
 
 namespace ramses_internal
 {
-    const StreamTextureSourceId EmbeddedCompositorScene::EmbeddedSurfaceStreamTextureSourceId = StreamTextureSourceId(123u);
+    const StreamTextureSourceId EmbeddedCompositorScene::EmbeddedSurfaceStreamTextureSourceId = StreamTextureSourceId(10123u);
 
     EmbeddedCompositorScene::EmbeddedCompositorScene(ramses::RamsesClient& ramsesClient, ramses::Scene& scene, UInt32 state, const Vector3& cameraPosition)
         : IntegrationScene(ramsesClient, scene, cameraPosition)
@@ -149,6 +149,7 @@ namespace ramses_internal
         const ramses::TextureSampler* sampler = scene.createTextureSampler(
                     ramses::ETextureAddressMode_Repeat,
                     ramses::ETextureAddressMode_Repeat,
+                    ramses::ETextureSamplingMethod_Nearest,
                     ramses::ETextureSamplingMethod_Nearest,
                     *streamTexture);
         ramses::Appearance* appearance = scene.createAppearance(m_effect, "triangle appearance");

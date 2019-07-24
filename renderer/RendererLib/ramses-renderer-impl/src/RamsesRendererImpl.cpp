@@ -34,7 +34,7 @@ namespace ramses
         , m_binaryShaderCache(config.impl.getBinaryShaderCache() ? new BinaryShaderCacheProxy(*(config.impl.getBinaryShaderCache())) : NULL)
         , m_rendererResourceCache(config.impl.getRendererResourceCache() ? new RendererResourceCacheProxy(*(config.impl.getRendererResourceCache())) : nullptr)
         , m_pendingRendererCommands()
-        , m_rendererFrameworkLogic(framework.impl.getConnectionStatusUpdateNotifier(), framework.impl.getResourceComponent(), framework.impl.getScenegraphComponent(), m_rendererCommandBuffer, framework.impl.getFrameworkLock())
+        , m_rendererFrameworkLogic(framework.impl.getRamsesConnectionStatusUpdateNotifier(), framework.impl.getResourceComponent(), framework.impl.getScenegraphComponent(), m_rendererCommandBuffer, framework.impl.getFrameworkLock())
         , m_platformFactory(platformFactory != NULL ? platformFactory : ramses_internal::PlatformFactory_Base::CreatePlatformFactory(m_internalConfig))
         , m_resourceUploader(m_rendererStatistics, m_binaryShaderCache.get())
         , m_renderer(new ramses_internal::WindowedRenderer(m_rendererCommandBuffer, framework.impl.getScenegraphComponent(), *m_platformFactory, m_rendererStatistics, m_internalConfig.getKPIFileName()))
@@ -198,7 +198,7 @@ namespace ramses
         m_pendingRendererCommands.confirmationEcho(text);
     }
 
-    const ramses_internal::RendererCommands& RamsesRendererImpl::getCommands() const
+    const ramses_internal::RendererCommands& RamsesRendererImpl::getPendingCommands() const
     {
         return m_pendingRendererCommands;
     }
@@ -376,13 +376,29 @@ namespace ramses
         }
     }
 
-    status_t RamsesRendererImpl::systemCompositorTakeScreenshot(const char* fileName)
+    status_t RamsesRendererImpl::systemCompositorSetIviLayerVisibility(uint32_t layerId, bool visibility)
     {
         ramses_internal::PlatformLightweightGuard guard(m_lock);
 
         if (m_systemCompositorEnabled)
         {
-            m_pendingRendererCommands.systemCompositorControllerScreenshot(fileName);
+            const ramses_internal::WaylandIviLayerId waylandIviLayerId(layerId);
+            m_pendingRendererCommands.systemCompositorControllerSetIviLayerVisibility(waylandIviLayerId, visibility);
+            return StatusOK;
+        }
+        else
+        {
+            return addErrorEntry("RamsesRenderer::setLayerVisibility failed: system compositor was not enabled when creating the renderer.");
+        }
+    }
+
+    status_t RamsesRendererImpl::systemCompositorTakeScreenshot(const char* fileName, int32_t screenIviId)
+    {
+        ramses_internal::PlatformLightweightGuard guard(m_lock);
+
+        if (m_systemCompositorEnabled)
+        {
+            m_pendingRendererCommands.systemCompositorControllerScreenshot(fileName, screenIviId);
             return StatusOK;
         }
         else
@@ -576,6 +592,9 @@ namespace ramses
                     RamsesRendererUtils::GetMouseEvent(event.mouseEvent.type),
                     event.mouseEvent.pos.x, event.mouseEvent.pos.y);
                 break;
+            case ramses_internal::ERendererEventType_WindowResizeEvent:
+                rendererEventHandler.windowResized(event.displayHandle.asMemoryHandle(), event.resizeEvent.width, event.resizeEvent.height);
+                break;
             case ramses_internal::ERendererEventType_StreamSurfaceAvailable:
                 rendererEventHandler.streamAvailabilityChanged(ramses::streamSource_t(event.streamSourceId.getValue()), true);
                 break;
@@ -693,17 +712,10 @@ namespace ramses
         return m_loopMode == ramses_internal::ELoopMode_UpdateAndRender? ramses::ELoopMode_UpdateAndRender : ramses::ELoopMode_UpdateOnly;
     }
 
-    ramses::status_t RamsesRendererImpl::setFrameTimerLimits(uint64_t limitForClientResourcesUpload, uint64_t limitForSceneActionsApply, uint64_t limitForOffscreenBufferRender)
+    ramses::status_t RamsesRendererImpl::setFrameTimerLimits(uint64_t limitForSceneResourcesUpload, uint64_t limitForClientResourcesUpload, uint64_t limitForSceneActionsApply, uint64_t limitForOffscreenBufferRender)
     {
         ramses_internal::PlatformLightweightGuard guard(m_lock);
-        m_pendingRendererCommands.setFrameTimerLimits(limitForClientResourcesUpload, limitForSceneActionsApply, limitForOffscreenBufferRender);
-        return StatusOK;
-    }
-
-    status_t RamsesRendererImpl::setSceneResourcesTimerLimit(uint64_t limitForSceneResourcesUpload)
-    {
-        ramses_internal::PlatformLightweightGuard guard(m_lock);
-        m_pendingRendererCommands.setSceneResourcesTimerLimit(limitForSceneResourcesUpload);
+        m_pendingRendererCommands.setFrameTimerLimits(limitForSceneResourcesUpload, limitForClientResourcesUpload, limitForSceneActionsApply, limitForOffscreenBufferRender);
         return StatusOK;
     }
 

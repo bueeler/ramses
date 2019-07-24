@@ -27,17 +27,6 @@ namespace ramses_internal
         return m_scene.getSceneId();
     }
 
-    SceneVersionTag ActionTestScene::getSceneVersionTag() const
-    {
-        return m_scene.getSceneVersionTag();
-    }
-
-    void ActionTestScene::setSceneVersionTag(SceneVersionTag sceneVersionTag)
-    {
-        m_actionCollector.setSceneVersionTag(sceneVersionTag);
-        flushPendingSceneActions();
-    }
-
     UInt32 ActionTestScene::getRenderableCount() const
     {
         return m_scene.getRenderableCount();
@@ -167,6 +156,12 @@ namespace ramses_internal
         flushPendingSceneActions();
     }
 
+    void ActionTestScene::setRenderStateScissorTest(RenderStateHandle stateHandle, EScissorTest flag, const RenderState::ScissorRegion& region)
+    {
+        m_actionCollector.setRenderStateScissorTest(stateHandle, flag, region);
+        flushPendingSceneActions();
+    }
+
     void ActionTestScene::setRenderStateStencilFunc(RenderStateHandle stateHandle, EStencilFunc func, UInt8 ref, UInt8 mask)
     {
         m_actionCollector.setRenderStateStencilFunc(stateHandle, func, ref, mask);
@@ -195,9 +190,9 @@ namespace ramses_internal
         return m_scene.getCameraCount();
     }
 
-    CameraHandle ActionTestScene::allocateCamera(ECameraProjectionType projType, NodeHandle nodeHandle, CameraHandle handle /*= CameraHandle::Invalid()*/)
+    CameraHandle ActionTestScene::allocateCamera(ECameraProjectionType projType, NodeHandle nodeHandle, DataInstanceHandle viewportDataInstance, CameraHandle handle /*= CameraHandle::Invalid()*/)
     {
-        const CameraHandle actualHandle = m_actionCollector.allocateCamera(projType, nodeHandle, handle);
+        const CameraHandle actualHandle = m_actionCollector.allocateCamera(projType, nodeHandle, viewportDataInstance, handle);
         flushPendingSceneActions();
         return actualHandle;
     }
@@ -205,12 +200,6 @@ namespace ramses_internal
     void ActionTestScene::releaseCamera(CameraHandle cameraHandle)
     {
         m_actionCollector.releaseCamera(cameraHandle);
-        flushPendingSceneActions();
-    }
-
-    void ActionTestScene::setCameraViewport(CameraHandle cameraHandle, const Viewport& vp)
-    {
-        m_actionCollector.setCameraViewport(cameraHandle, vp);
         flushPendingSceneActions();
     }
 

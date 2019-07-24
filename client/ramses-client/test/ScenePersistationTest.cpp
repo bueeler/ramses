@@ -126,7 +126,7 @@ namespace ramses
     {
         PerspectiveCamera* camera = this->m_scene.createPerspectiveCamera("my cam");
         camera->setFrustum(0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f);
-        camera->setViewport(1, 2, 3, 4);
+        camera->setViewport(1, -2, 3, 4);
 
         doWriteReadCycle();
 
@@ -139,8 +139,8 @@ namespace ramses
         EXPECT_EQ(0.5f, loadedCamera->getNearPlane());
         EXPECT_EQ(0.6f, loadedCamera->getFarPlane());
 
-        EXPECT_EQ(1u, loadedCamera->getViewportX());
-        EXPECT_EQ(2u, loadedCamera->getViewportY());
+        EXPECT_EQ(1, loadedCamera->getViewportX());
+        EXPECT_EQ(-2, loadedCamera->getViewportY());
         EXPECT_EQ(3u, loadedCamera->getViewportWidth());
         EXPECT_EQ(4u, loadedCamera->getViewportHeight());
     }
@@ -172,7 +172,7 @@ namespace ramses
     {
         OrthographicCamera* camera = this->m_scene.createOrthographicCamera("my cam");
         camera->setFrustum(0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f);
-        camera->setViewport(1, 2, 3, 4);
+        camera->setViewport(1, -2, 3, 4);
 
         doWriteReadCycle();
 
@@ -187,8 +187,8 @@ namespace ramses
         EXPECT_FLOAT_EQ(0.5f, loadedCamera->getNearPlane());
         EXPECT_FLOAT_EQ(0.6f, loadedCamera->getFarPlane());
 
-        EXPECT_EQ(1u, loadedCamera->getViewportX());
-        EXPECT_EQ(2u, loadedCamera->getViewportY());
+        EXPECT_EQ(1, loadedCamera->getViewportX());
+        EXPECT_EQ(-2, loadedCamera->getViewportY());
         EXPECT_EQ(3u, loadedCamera->getViewportWidth());
         EXPECT_EQ(4u, loadedCamera->getViewportHeight());
     }
@@ -848,15 +848,16 @@ namespace ramses
 
     TEST_F(ASceneAndAnimationSystemLoadedFromFile, canReadWriteATextureSampler)
     {
-        ETextureAddressMode wrapUMode = ETextureAddressMode_Mirror;
-        ETextureAddressMode wrapVMode = ETextureAddressMode_Repeat;
-        ETextureSamplingMethod samplingMethod = ETextureSamplingMethod_BilinearWithMipMaps;
-        uint8_t data[4] = { 0u };
-        MipLevelData mipLevelData(sizeof(data), data);
-        Texture2D* texture = this->client.createTexture2D(1u, 1u, ETextureFormat_RGBA8, 1, &mipLevelData, false, ramses::ResourceCacheFlag_DoNotCache, "texture");
+        const ETextureAddressMode wrapUMode = ETextureAddressMode_Mirror;
+        const ETextureAddressMode wrapVMode = ETextureAddressMode_Repeat;
+        const ETextureSamplingMethod minSamplingMethod = ETextureSamplingMethod_Linear_MipMapNearest;
+        const ETextureSamplingMethod magSamplingMethod = ETextureSamplingMethod_Linear;
+        const uint8_t data[4] = { 0u };
+        const MipLevelData mipLevelData(sizeof(data), data);
+        const Texture2D* texture = this->client.createTexture2D(1u, 1u, ETextureFormat_RGBA8, 1, &mipLevelData, false, ramses::ResourceCacheFlag_DoNotCache, "texture");
         m_resources.add(texture);
 
-        TextureSampler* sampler = this->m_scene.createTextureSampler(wrapUMode, wrapVMode, samplingMethod, *texture, 8u, "sampler");
+        TextureSampler* sampler = this->m_scene.createTextureSampler(wrapUMode, wrapVMode, minSamplingMethod, magSamplingMethod, *texture, 8u, "sampler");
         ASSERT_TRUE(0 != sampler);
 
         doWriteReadCycle();
@@ -866,7 +867,8 @@ namespace ramses
 
         EXPECT_EQ(wrapUMode, loadedSampler->getWrapUMode());
         EXPECT_EQ(wrapVMode, loadedSampler->getWrapVMode());
-        EXPECT_EQ(samplingMethod, loadedSampler->getSamplingMethod());
+        EXPECT_EQ(minSamplingMethod, loadedSampler->getMinSamplingMethod());
+        EXPECT_EQ(magSamplingMethod, loadedSampler->getMagSamplingMethod());
         EXPECT_EQ(8u, loadedSampler->getAnisotropyLevel());
         EXPECT_EQ(texture->impl.getLowlevelResourceHash(), this->m_sceneLoaded->impl.getIScene().getTextureSampler(loadedSampler->impl.getTextureSamplerHandle()).textureResource);
         EXPECT_EQ(ERamsesObjectType_Texture2D, loadedSampler->impl.getTextureType());
@@ -1011,7 +1013,7 @@ namespace ramses
         {
             ramses_internal::File file(filename);
             file.open(ramses_internal::EFileMode_WriteNew);
-            ramses_internal::Vector<ramses_internal::Char> zerovector(4096);
+            std::vector<ramses_internal::Char> zerovector(4096);
             file.write(&zerovector[0], zerovector.size());
             file.close();
         }
@@ -1026,7 +1028,7 @@ namespace ramses
         {
             ramses_internal::File file(filename);
             file.open(ramses_internal::EFileMode_WriteNew);
-            ramses_internal::Vector<ramses_internal::Char> zerovector(4096);
+            std::vector<ramses_internal::Char> zerovector(4096);
             file.write(&zerovector[0], zerovector.size());
             file.close();
         }

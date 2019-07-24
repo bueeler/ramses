@@ -36,7 +36,7 @@ namespace
     // If multiple platform backends are created at the same time, they have to have different id's
     // The numbers have special meaning, therefore the test uses 100, 101, 102, ... to make sure they
     // don't clash with existing applications
-    const uint32_t firstIviSurfaceId = 100;
+    const uint32_t firstIviSurfaceId = 10010;
 }
 
 void RendererTestUtils::SaveScreenshotForDisplay(ramses::RamsesRenderer& renderer, ramses::displayId_t displayId, UInt32 x, UInt32 y, UInt32 width, UInt32 height, const String& screenshotFileName)
@@ -58,7 +58,7 @@ bool RendererTestUtils::CompareBitmapToImageInFile(const Image& actualBitmap, co
     if (expectedBitmap.getWidth() != actualBitmap.getWidth() ||
         expectedBitmap.getHeight() != actualBitmap.getHeight())
     {
-        printf("Screenshot comparison failed: size of expected image %d/%d does not match size of actual image %d/%d\n",
+        printf("Screenshot comparison failed: size of expected image %u/%u does not match size of actual image %u/%u\n",
             expectedBitmap.getWidth(), expectedBitmap.getHeight(), actualBitmap.getWidth(), actualBitmap.getHeight());
         return false;
     }
@@ -79,12 +79,12 @@ bool RendererTestUtils::CompareBitmapToImageInFile(const Image& actualBitmap, co
 
     if (averagePercentErrorPerPixel > maxAveragePercentErrorPerPixel)
     {
-        printf("Screenshot comparison failed: %s (%ix%i)\n", expectedScreenshotFileName.c_str(), diff.getWidth(), diff.getHeight());
+        printf("Screenshot comparison failed: %s (%ux%u)\n", expectedScreenshotFileName.c_str(), diff.getWidth(), diff.getHeight());
         printf(" - avg error per pixel %.2f, maximum allowed error is %.2f\n", averagePercentErrorPerPixel, maxAveragePercentErrorPerPixel);
-        printf(" - number of pixels different by more than 1 (one or more color channels): %i\n", diff.getNumberOfNonBlackPixels(1));
-        printf(" - number of pixels different by more than 64 (one or more color channels): %i\n", diff.getNumberOfNonBlackPixels(64));
-        printf(" - number of pixels different by more than 128 (one or more color channels): %i\n", diff.getNumberOfNonBlackPixels(128));
-        printf(" - number of pixels different by 255 (one or more color channels): %i\n", diff.getNumberOfNonBlackPixels(254));
+        printf(" - number of pixels different by more than 1 (one or more color channels): %u\n", diff.getNumberOfNonBlackPixels(1));
+        printf(" - number of pixels different by more than 64 (one or more color channels): %u\n", diff.getNumberOfNonBlackPixels(64));
+        printf(" - number of pixels different by more than 128 (one or more color channels): %u\n", diff.getNumberOfNonBlackPixels(128));
+        printf(" - number of pixels different by 255 (one or more color channels): %u\n", diff.getNumberOfNonBlackPixels(254));
 
         const String screenShotPath = String("./res/diffs");
 

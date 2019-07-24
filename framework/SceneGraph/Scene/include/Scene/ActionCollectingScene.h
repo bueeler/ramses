@@ -21,9 +21,6 @@ namespace ramses_internal
 
         virtual void                        preallocateSceneSize            (const SceneSizeInformation& sizeInfo) override;
 
-        // Generic scene info
-        virtual void                        setSceneVersionTag              (SceneVersionTag sceneVersionTag) override;
-
         // Renderable allocation
         virtual RenderableHandle            allocateRenderable              (NodeHandle nodeHandle, RenderableHandle handle = RenderableHandle::Invalid()) override;
         virtual void                        releaseRenderable               (RenderableHandle renderableHandle) override;
@@ -47,14 +44,14 @@ namespace ramses_internal
         virtual void                        setRenderStateDrawMode          (RenderStateHandle stateHandle, EDrawMode drawMode) override;
         virtual void                        setRenderStateDepthFunc         (RenderStateHandle stateHandle, EDepthFunc func) override;
         virtual void                        setRenderStateDepthWrite        (RenderStateHandle stateHandle, EDepthWrite flag) override;
+        virtual void                        setRenderStateScissorTest       (RenderStateHandle stateHandle, EScissorTest flag, const RenderState::ScissorRegion& region) override;
         virtual void                        setRenderStateStencilFunc       (RenderStateHandle stateHandle, EStencilFunc func, UInt8 ref, UInt8 mask) override;
         virtual void                        setRenderStateStencilOps        (RenderStateHandle stateHandle, EStencilOp sfail, EStencilOp dpfail, EStencilOp dppass) override;
         virtual void                        setRenderStateColorWriteMask    (RenderStateHandle stateHandle, ColorWriteMask colorMask) override;
 
         // Camera
-        virtual CameraHandle                allocateCamera                  (ECameraProjectionType type, NodeHandle nodeHandle, CameraHandle handle = CameraHandle::Invalid()) override;
+        virtual CameraHandle                allocateCamera                  (ECameraProjectionType type, NodeHandle nodeHandle, DataInstanceHandle viewportDataInstance, CameraHandle handle = CameraHandle::Invalid()) override;
         virtual void                        releaseCamera                   (CameraHandle cameraHandle) override;
-        virtual void                        setCameraViewport               (CameraHandle cameraHandle, const Viewport& vp) override;
         virtual void                        setCameraFrustum                (CameraHandle cameraHandle, const Frustum& frustum) override;
 
         // Creation/Deletion

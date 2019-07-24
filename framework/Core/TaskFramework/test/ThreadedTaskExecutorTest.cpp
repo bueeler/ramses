@@ -226,7 +226,7 @@ namespace ramses_internal
         virtual void unregisterThread(ramses::ERamsesThreadIdentifier) {}
 
         std::chrono::system_clock::time_point last;
-        Vector<std::chrono::milliseconds> values;
+        std::vector<std::chrono::milliseconds> values;
         bool initialized = false;
     };
 
@@ -234,7 +234,7 @@ namespace ramses_internal
 
     INSTANTIATE_TEST_CASE_P(testWithDifferentNotificationValues,
         WatchDogTimeoutTest,
-        testing::Values(100, 300, 800));
+        testing::Values(300, 800));
 
     TEST_P(WatchDogTimeoutTest, watchdogConfigTimeoutsAreBaseForAliveNotification)
     {

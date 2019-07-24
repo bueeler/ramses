@@ -59,12 +59,11 @@ namespace ramses_internal
         MOCK_METHOD1(depthFunc, void(EDepthFunc));
         MOCK_METHOD1(depthWrite, void(EDepthWrite));
         MOCK_METHOD3(stencilFunc, void(EStencilFunc, UInt8, UInt8));
+        MOCK_METHOD2(scissorTest, void(EScissorTest, const RenderState::ScissorRegion&));
         MOCK_METHOD3(stencilOp, void(EStencilOp, EStencilOp, EStencilOp));
         MOCK_METHOD1(drawMode, void(EDrawMode));
         MOCK_METHOD4(setViewport, void(UInt32, UInt32, UInt32, UInt32));
-        MOCK_METHOD1(enableScissorTest, void(Bool));
-        MOCK_METHOD4(setScissorRegion, void(UInt32, UInt32, UInt32, UInt32));
-        MOCK_METHOD6(setTextureSampling, void(DataFieldHandle, EWrapMethod, EWrapMethod, EWrapMethod, ESamplingMethod, UInt32));
+        MOCK_METHOD7(setTextureSampling, void(DataFieldHandle, EWrapMethod, EWrapMethod, EWrapMethod, ESamplingMethod, ESamplingMethod, UInt32));
 
         MOCK_METHOD2(allocateVertexBuffer, DeviceResourceHandle(EDataType, UInt32));
         MOCK_METHOD3(uploadVertexBufferData, void(DeviceResourceHandle, const Byte*, UInt32));
@@ -93,7 +92,7 @@ namespace ramses_internal
 
         MOCK_METHOD1(uploadRenderBuffer, DeviceResourceHandle(const RenderBuffer&));
         MOCK_METHOD1(deleteRenderBuffer, void(DeviceResourceHandle));
-        MOCK_METHOD5(uploadTextureSampler, DeviceResourceHandle(EWrapMethod, EWrapMethod, EWrapMethod, ESamplingMethod, UInt32));
+        MOCK_METHOD6(uploadTextureSampler, DeviceResourceHandle(EWrapMethod, EWrapMethod, EWrapMethod, ESamplingMethod, ESamplingMethod, UInt32));
         MOCK_METHOD1(deleteTextureSampler, void(DeviceResourceHandle));
         MOCK_METHOD2(activateTextureSampler, void(DeviceResourceHandle, DataFieldHandle));
         MOCK_CONST_METHOD0(getFramebufferRenderTarget, DeviceResourceHandle());

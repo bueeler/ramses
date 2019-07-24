@@ -540,6 +540,26 @@ TEST_F(ARendererCommands, createsCommandsForAddingSurfaceToLayerInSystemComposit
     }
 }
 
+TEST_F(ARendererCommands, createsCommandsForSettingLayerVisibilityInSystemCompositorController)
+{
+    queue.systemCompositorControllerSetIviLayerVisibility(WaylandIviLayerId(18), false);
+    queue.systemCompositorControllerSetIviLayerVisibility(WaylandIviLayerId(17), true);
+
+    EXPECT_EQ(2u, queue.getCommands().getTotalCommandCount());
+    {
+        const CompositorCommand& command = queue.getCommands().getCommandData<CompositorCommand>(0);
+        EXPECT_EQ(ERendererCommand_SystemCompositorControllerSetIviLayerVisibility, queue.getCommands().getCommandType(0));
+        EXPECT_EQ(18u, command.waylandIviLayerId.getValue());
+        EXPECT_FALSE(command.visibility);
+    }
+    {
+        const CompositorCommand& command = queue.getCommands().getCommandData<CompositorCommand>(1);
+        EXPECT_EQ(ERendererCommand_SystemCompositorControllerSetIviLayerVisibility, queue.getCommands().getCommandType(1));
+        EXPECT_EQ(17u, command.waylandIviLayerId.getValue());
+        EXPECT_TRUE(command.visibility);
+    }
+}
+
 TEST_F(ARendererCommands, createsCommandsForRemovingSurfaceFromLayerInSystemCompositorController)
 {
     queue.systemCompositorControllerRemoveIviSurfaceFromIviLayer(WaylandIviSurfaceId(73), WaylandIviLayerId(348));
@@ -581,13 +601,14 @@ TEST_F(ARendererCommands, createsCommandsForDestroySurfaceInSystemCompositorCont
 TEST_F(ARendererCommands, createsCommandsForTakingScreenshotInSystemCompositorController)
 {
     String fileName("image.png");
-    queue.systemCompositorControllerScreenshot(fileName);
+    queue.systemCompositorControllerScreenshot(fileName, 3);
 
     EXPECT_EQ(1u, queue.getCommands().getTotalCommandCount());
     {
         const CompositorCommand& command = queue.getCommands().getCommandData<CompositorCommand>(0);
         EXPECT_EQ(ERendererCommand_SystemCompositorControllerScreenshot, queue.getCommands().getCommandType(0));
         EXPECT_EQ(fileName, command.fileName);
+        EXPECT_EQ(3, command.screenIviId);
     }
 }
 
@@ -608,27 +629,16 @@ TEST_F(ARendererCommands, createsCommandsForSetClearColor)
 
 TEST_F(ARendererCommands, createsCommandForSettingFrameTimerLimits)
 {
-    queue.setFrameTimerLimits(10u, 20u, 30u);
+    queue.setFrameTimerLimits(5u, 10u, 20u, 30u);
 
     EXPECT_EQ(1u, queue.getCommands().getTotalCommandCount());
     {
         const auto& command = queue.getCommands().getCommandData<SetFrameTimerLimitsCommmand>(0);
         EXPECT_EQ(ERendererCommand_SetFrameTimerLimits, queue.getCommands().getCommandType(0));
+        EXPECT_EQ(5u, command.limitForSceneResourcesUploadMicrosec);
         EXPECT_EQ(10u, command.limitForClientResourcesUploadMicrosec);
         EXPECT_EQ(20u, command.limitForSceneActionsApplyMicrosec);
         EXPECT_EQ(30u, command.limitForOffscreenBufferRenderMicrosec);
-    }
-}
-
-TEST_F(ARendererCommands, createsCommandForSettingSceneResourceTimerLimit)
-{
-    queue.setSceneResourcesTimerLimit(40u);
-
-    EXPECT_EQ(1u, queue.getCommands().getTotalCommandCount());
-    {
-        const auto& command = queue.getCommands().getCommandData<SetFrameTimerLimitsCommmand>(0);
-        EXPECT_EQ(ERendererCommand_SetResourceActionTimer, queue.getCommands().getCommandType(0));
-        EXPECT_EQ(40u, command.limitForSceneResourcesUploadMicrosec);
     }
 }
 

@@ -23,12 +23,6 @@ namespace ramses_internal
         m_creator.preallocateSceneSize(sizeInfo);
     }
 
-    void ActionCollectingScene::setSceneVersionTag(SceneVersionTag sceneVersionTag)
-    {
-        ResourceChangeCollectingScene::setSceneVersionTag(sceneVersionTag);
-        m_creator.setSceneVersionTag(sceneVersionTag);
-    }
-
     void ActionCollectingScene::setDataResource(DataInstanceHandle containerHandle, DataFieldHandle field, const ResourceContentHash& hash, DataBufferHandle dataBuffer, UInt32 instancingDivisor)
     {
         ResourceChangeCollectingScene::setDataResource(containerHandle, field, hash, dataBuffer, instancingDivisor);
@@ -198,10 +192,10 @@ namespace ramses_internal
         return handleActual;
     }
 
-    CameraHandle ActionCollectingScene::allocateCamera(ECameraProjectionType type, NodeHandle nodeHandle, CameraHandle handle)
+    CameraHandle ActionCollectingScene::allocateCamera(ECameraProjectionType type, NodeHandle nodeHandle, DataInstanceHandle viewportDataInstance, CameraHandle handle)
     {
-        CameraHandle handleActual = ResourceChangeCollectingScene::allocateCamera(type, nodeHandle, handle);
-        m_creator.allocateCamera(type, nodeHandle, handleActual);
+        CameraHandle handleActual = ResourceChangeCollectingScene::allocateCamera(type, nodeHandle, viewportDataInstance, handle);
+        m_creator.allocateCamera(type, nodeHandle, viewportDataInstance, handleActual);
 
         return handleActual;
     }
@@ -210,12 +204,6 @@ namespace ramses_internal
     {
         ResourceChangeCollectingScene::releaseCamera(cameraHandle);
         m_creator.releaseCamera(cameraHandle);
-    }
-
-    void ActionCollectingScene::setCameraViewport(CameraHandle cameraHandle, const Viewport& vp)
-    {
-        ResourceChangeCollectingScene::setCameraViewport(cameraHandle, vp);
-        m_creator.setCameraViewport(cameraHandle, vp);
     }
 
     void ActionCollectingScene::setCameraFrustum(CameraHandle cameraHandle, const Frustum& frustum)
@@ -246,6 +234,12 @@ namespace ramses_internal
     {
         ResourceChangeCollectingScene::setRenderStateDepthFunc(stateHandle, func);
         m_creator.setRenderStateDepthFunc(stateHandle, func);
+    }
+
+    void ActionCollectingScene::setRenderStateScissorTest(RenderStateHandle stateHandle, EScissorTest flag, const RenderState::ScissorRegion& region)
+    {
+        ResourceChangeCollectingScene::setRenderStateScissorTest(stateHandle, flag, region);
+        m_creator.setRenderStateScissorTest(stateHandle, flag, region);
     }
 
     void ActionCollectingScene::setRenderStateCullMode(RenderStateHandle stateHandle, ECullMode cullMode)

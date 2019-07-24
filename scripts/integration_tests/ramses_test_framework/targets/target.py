@@ -10,6 +10,8 @@ import os
 import posixpath
 import time
 import glob
+import random
+import string
 from PIL import Image
 from abc import ABCMeta, abstractmethod
 
@@ -40,6 +42,8 @@ class Target:
         self.password = targetInfo.password
         self.sshPort = targetInfo.sshPort
         self.tcpTestsInterfaceIp = targetInfo.tcpTestsInterfaceIp
+        self.tcpAliveIntervalMs = None
+        self.tcpAliveTimeoutMs = None
 
         self.ramsesInstallDir = ramsesInstallDir
         self.resultDir = resultDir
@@ -58,6 +62,10 @@ class Target:
         self.ltraceCommandSupported = False
         self.baseWorkingDirectory = self.ramsesInstallDir + "/bin"
         self.tmpDir = "/tmp"
+        self.fixed_screenshot_prefix = 'ramsestlst_'
+        self.unique_screenshot_prefix = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
+        self.target_screenshot_counter = 0
+        self.main_screen_id = -1
 
         if targetInfo.systemMonitorClassname is not None:
             self.systemMonitor = targetInfo.systemMonitorClassname(resultDir)
@@ -73,7 +81,9 @@ class Target:
         pass
 
     def target_specific_tear_down(self, shutdown=True):
-        pass #can be overwritten by sub-classes
+        # delete all screenshots at once
+        if self.isConnected:
+            self._delete_files_on_target("{}*".format(self.fixed_screenshot_prefix), self.tmpDir)
 
     @abstractmethod
     def execute_on_target(self, commandToExecute, block=True, env=None, cwd=None):
@@ -152,6 +162,8 @@ class Target:
         extendedArgs += " -l " + str(self.logLevel) +" --enableSmokeTestContext " + " --enableProtocolVersionOffset "
         #use custom daemon port for all ramses applications to avoid connections to other applications running on the system (e.g. the HMI)
         extendedArgs += " -p {}".format(CUSTOM_DAEMON_PORT)
+        env['DISABLE_CONSOLE_COLORS'] = '1'
+        env['DISABLE_RAMSH_INTERACTIVE_MODE'] = '1'
         application = self.start_application(applicationName, extendedArgs, binaryDirectoryOnTarget, nameExtension, env, dltAppID)
         if self.systemMonitor is not None:
             self.systemMonitor.addApplication(applicationName)
@@ -210,19 +222,13 @@ class Target:
                                     useSystemCompositorForScreenshot, compareForEquality):
         log.info("taking screenshot...")
 
-        #inject number to screenshot name
-        splittedImageName = os.path.splitext(imageName)
-        screenshotName = "{0}_{1}{2}".format(splittedImageName[0], screenshotNumber, splittedImageName[1])
-        if not compareForEquality:
-            screenshotName = "not_"+screenshotName
-
         referenceImagePath = self._find_reference_image(imageName)
         refImage = Image.open(referenceImagePath)
 
         minWidth = refImage.size[0]
         minHeight = refImage.size[1]
 
-        pathToResultScreenshot = self._take_and_transfer_screenshot(renderer, screenshotName, testClassName,
+        pathToResultScreenshot = self._take_and_transfer_screenshot(renderer, imageName, screenshotNumber, testClassName,
                                                                     testRunName, displayNumber, useSystemCompositorForScreenshot,
                                                                     minWidth, minHeight)
         if not os.path.isfile(pathToResultScreenshot):
@@ -243,56 +249,34 @@ class Target:
     def delete_file(self, fileName):
         pass
 
-    def _take_and_transfer_screenshot(self, renderer, imageName, testClassName, testRunName,
+    def _take_and_transfer_screenshot(self, renderer, imageName, screenshotNumber, testClassName, testRunName,
                                       displayNumber, useSystemCompositorForScreenshot, minWidth, minHeight):
-        splittedImageName = os.path.splitext(imageName)  # split into image name and extension
-        extendedImageNameBase = splittedImageName[0] + '_' + self.name  # extend name with target name to make unique
-        # Add wildcard, because the system compositor outputs multiple screenshots. One for each screen, that has the suffix "_<number>".
-        screenshotNamePattern = extendedImageNameBase + "*.*"
 
-        #delete old screenshot files on target if existing
-        self._delete_files_on_target(screenshotNamePattern, self.tmpDir)
+        splittedImageName = os.path.splitext(imageName)
+        localScreenshotName = "{}_{}_{}{}".format(splittedImageName[0], screenshotNumber, self.name, splittedImageName[1])
+        targetScreenshotName = "{}{}_{:04d}_{}".format(self.fixed_screenshot_prefix, self.unique_screenshot_prefix, self.target_screenshot_counter, localScreenshotName)
+        self.target_screenshot_counter += 1
 
         # trigger screenshot(s)
         if useSystemCompositorForScreenshot:
-            self._take_system_compositor_screenshot(extendedImageNameBase + ".png", renderer)
+            self._take_system_compositor_screenshot(targetScreenshotName, renderer)
         else:
-            self._take_renderer_screenshot(extendedImageNameBase + ".png", renderer, displayNumber)
+            self._take_renderer_screenshot(targetScreenshotName, renderer, displayNumber)
 
         resultDirForTest = helper.get_result_dir_subdirectory(self.resultDir, testClassName+"/"+testRunName)
 
-        self._transfer_screenshots(screenshotNamePattern, self.tmpDir, resultDirForTest)
+        self._transfer_screenshots(targetScreenshotName, self.tmpDir, resultDirForTest)
 
-        # delete screenshots on target (disk space is precious these days)
-        self._delete_files_on_target(screenshotNamePattern, self.tmpDir)
+        localScreenshotFile = os.path.join(resultDirForTest, localScreenshotName)
+        log.info("Store remote {} as local {}".format(targetScreenshotName, localScreenshotFile))
+        os.rename(os.path.join(resultDirForTest, targetScreenshotName), localScreenshotFile)
 
-        #search for suitable screenshot
-        suitableScreenshotFound = False
-        screenShotFiles = glob.glob(os.path.normcase(resultDirForTest + '/' + screenshotNamePattern))
-        folderForUnusedPath = helper.get_result_dir_subdirectory(resultDirForTest, 'unused_screenshots')
+        #check image size
+        pilImage = Image.open(localScreenshotFile)
+        if (pilImage.size[0] < minWidth) or (pilImage.size[1] < minHeight):
+            log.errorAndAssert("Screenshot too small: expected >= {}x{}, got {}x{}".format(minWidth, minHeight, pilImage.size[0], pilImage.size[1]))
 
-        if len(screenShotFiles) == 0:
-            log.errorAndAssert("No screenshot files found")
-
-        for f in screenShotFiles:
-            if not suitableScreenshotFound:
-                #check image size
-                pilImage = Image.open(f)
-                if (pilImage.size[0] >= minWidth) and (pilImage.size[1] >= minHeight):
-                    suitableScreenshotFound = True
-                    returnFile = f
-                else:
-                    #too small, move to unused folder
-                    log.info("Screenshot too small: expected >= {}x{}, got {}x{}".format(minWidth, minHeight, pilImage.size[0], pilImage.size[1]))
-                    os.rename(f, os.path.join(folderForUnusedPath, os.path.basename(f)))
-            else:
-                #suitable file already found, move others to unused foler
-                os.rename(f, os.path.join(folderForUnusedPath, os.path.basename(f)))
-
-        if not suitableScreenshotFound:
-            log.errorAndAssert("No suitable screenshot found")
-
-        return returnFile
+        return localScreenshotFile
 
     @abstractmethod
     def _delete_files_on_target(self, namePattern, directory):
@@ -324,34 +308,21 @@ class Target:
 
     def _take_system_compositor_screenshot(self, screenshotName, renderer):
         log.info("Make screenshot of screen using system compositor")
-        renderer.send_ramsh_command("scScreenshot \"{0}\"".format(self.tmpDir+"/"+screenshotName), response_message="Screenshots of all outputs finished")
 
-        counter = 0
-        filesFound = []
-        allScreenshotsWritten = False
-        splittedScreenshotName = os.path.splitext(screenshotName)
-        screenshotNamePattern = self.tmpDir+'/'+splittedScreenshotName[0]+"*"+splittedScreenshotName[1]
+        targetScreenshotPath = self.tmpDir+"/"+screenshotName
+        renderer.send_ramsh_command("scScreenshot \"{}\" {}".format(targetScreenshotPath, self.main_screen_id), response_message="SystemCompositorController_Wayland_IVI::screenshot: Saved screenshot for screen")
 
-        while counter < SYSTEM_COMPOSITOR_SCREENSHOT_TIMEOUT and not allScreenshotsWritten:
-            if len(filesFound) == 0:
-                (filesFound, _, resultTest) = self.execute_on_target("find " + screenshotNamePattern)
-                if resultTest != 0:
-                    log.info("system_compositor_screenshot: file does not exist yet, counter {}, return code {}".format(counter, resultTest, filesFound))
-                    time.sleep(1)
-            else:
-                noFileInUse = True
-                for file in filesFound:
-                    (out, _, _) = self.execute_on_target("lsof " + file)
-                    if (len(out) != 0):
-                        noFileInUse = False
+        startTime = time.time()
+        while time.time() < startTime + SYSTEM_COMPOSITOR_SCREENSHOT_TIMEOUT:
+            (_, _, retCode) = self.execute_on_target("find " + targetScreenshotPath)
+            if retCode == 0:
+                log.info("system_compositor_screenshot: found {}".format(targetScreenshotPath))
+                return True
+            log.info("system_compositor_screenshot: find result {} since {}s ".format(retCode, time.time()-startTime))
+            time.sleep(0.1)
 
-                if noFileInUse:
-                    allScreenshotsWritten = True
-                else:
-                    log.info("system_compositor_screenshot: lsof result {} counter {} ".format(out, counter))
-                    time.sleep(1)
-
-            counter = counter + 1
+        log.warning("system_compositor_screenshot: failed to take screenshot {}".format(screenshotName))
+        return False
 
     def _find_reference_image(self, imageName):
         result = None

@@ -11,6 +11,14 @@
 	path = external/glslang
 	branch = refs/heads/7.8.2853
 [submodule "external/freetype"]
-	url = git://git.sv.nongnu.org/freetype/freetype2.git
+	url = https://git.sv.nongnu.org/r/freetype/freetype2.git
 	path = external/freetype
 	branch = refs/heads/VER-2-6
+[submodule "external/asio"]
+	url = https://github.com/chriskohlhoff/asio.git
+	path = external/asio
+	branch = refs/heads/asio-1-12-2
+[submodule "external/lz4"]
+	url = https://github.com/lz4/lz4.git
+	path = external/lz4
+	branch = refs/heads/v1.7.5

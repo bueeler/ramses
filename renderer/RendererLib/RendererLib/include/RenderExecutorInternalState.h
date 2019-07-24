@@ -52,6 +52,12 @@ namespace ramses_internal
             return m_changed;
         }
 
+        void reset()
+        {
+            m_changed = true;
+            m_state = STATETYPE();
+        }
+
     private:
         STATETYPE m_state;
         Bool      m_changed;
@@ -92,6 +98,7 @@ namespace ramses_internal
 
         CachedState < DeviceResourceHandle >    shaderDeviceHandle;
         CachedState < DeviceResourceHandle >    indexBufferDeviceHandle;
+        ScissorState                            scissorState;
         CachedState < DepthStencilState >       depthStencilState;
         CachedState < BlendState >              blendState;
         CachedState < RasterizerState >         rasterizerState;

@@ -35,6 +35,7 @@ GaussFilter::GaussFilter(ramses::RenderBuffer& inputBuffer,
     ramses::TextureSampler& textureSampler = *scene.createTextureSampler(ramses::ETextureAddressMode_Clamp,
                                                                          ramses::ETextureAddressMode_Clamp,
                                                                          ramses::ETextureSamplingMethod_Nearest,
+                                                                         ramses::ETextureSamplingMethod_Nearest,
                                                                          inputBuffer);
 
     float vertexPositionsArray[] = {0.0f,
@@ -118,7 +119,7 @@ void GaussFilter::setVariance(float variance)
 
     if (sum < sufficientSum)
     {
-        printf("GaussFilter::setVariance Maximum kernel size (%d) is to low for choosen variance (%f), sum: %f < "
+        printf("GaussFilter::setVariance Maximum kernel size (%u) is to low for choosen variance (%f), sum: %f < "
                "sufficientSum: %f\n",
                m_maxKernelSize,
                variance,

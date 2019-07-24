@@ -31,8 +31,6 @@ namespace ramses_internal
                 scene.preallocateSceneSize(SceneSizeInformation(100u, 100u, 100u, 100u, 100u, 100u, 100u, 100u, 100u, 100u, 100u, 100u, 100u, 100u, 100u, 100u, 100u, 100u));
             }
 
-            scene.setSceneVersionTag(sceneVersionTag);
-
             scene.allocateNode(0u, parent);
             scene.allocateNode(0u, child);
             scene.allocateNode(0u, childChild1);
@@ -61,6 +59,7 @@ namespace ramses_internal
             scene.setRenderStateDrawMode(renderState, EDrawMode::Triangles);
             scene.setRenderStateDepthWrite(renderState, EDepthWrite::Disabled);
             scene.setRenderStateDepthFunc(renderState, EDepthFunc::GreaterEqual);
+            scene.setRenderStateScissorTest(renderState, EScissorTest::Enabled, { 10, 20, 30, 40 });
             scene.setRenderStateStencilFunc(renderState, EStencilFunc::NotEqual, 12u, 0xAA);
             scene.setRenderStateStencilOps(renderState, EStencilOp::Increment, EStencilOp::IncrementWrap, EStencilOp::Decrement);
             const ColorWriteMask colorMask = EColorWriteFlag_Red | EColorWriteFlag_Blue;
@@ -93,6 +92,8 @@ namespace ramses_internal
             };
             scene.allocateDataLayout(geometryLayoutDataFields, vertexLayout);
 
+            scene.allocateDataInstance(scene.allocateDataLayout({ {ramses_internal::EDataType_Vector2I}, {ramses_internal::EDataType_Vector2I} }), cameraVPDataInstance);
+
             scene.allocateStreamTexture(87u, ResourceContentHash(234, 0), streamTexture);
             scene.setForceFallbackImage(streamTexture, true);
 
@@ -120,14 +121,12 @@ namespace ramses_internal
             scene.setRenderableDataInstance(renderable, ERenderableDataSlotType_Uniforms, uniformData);
             scene.setRenderableDataInstance(renderable, ERenderableDataSlotType_Geometry, geometryData);
 
-            scene.allocateCamera(ECameraProjectionType_Renderer, cameraNode, camera);
+            scene.allocateCamera(ECameraProjectionType_Renderer, cameraNode, cameraVPDataInstance, camera);
 
-            scene.allocateCamera(ECameraProjectionType_Perspective,cameraNode, perspectiveCamera);
-            scene.setCameraViewport(perspectiveCamera, { 1, 2, 3, 4 });
+            scene.allocateCamera(ECameraProjectionType_Perspective,cameraNode, cameraVPDataInstance, perspectiveCamera);
             scene.setCameraFrustum(perspectiveCamera, { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f });
 
-            scene.allocateCamera(ECameraProjectionType_Orthographic, cameraNode, orthographicCamera);
-            scene.setCameraViewport(orthographicCamera, { 5, 6, 7, 8 });
+            scene.allocateCamera(ECameraProjectionType_Orthographic, cameraNode, cameraVPDataInstance, orthographicCamera);
             scene.setCameraFrustum(orthographicCamera, { 1.1f, 1.2f, 1.3f, 1.4f, 1.5f, 1.6f });
 
             scene.allocateRenderTarget(renderTarget);
@@ -202,7 +201,6 @@ namespace ramses_internal
             CheckDataBuffersEquivalentTo<OTHERSCENE>(otherScene);
             CheckTextureBuffersEquivalentTo<OTHERSCENE>(otherScene);
             CheckDataSlotsEquivalentTo<OTHERSCENE>(otherScene);
-            CheckSceneVersionTagEquivalentTo<OTHERSCENE>(otherScene);
         }
 
         template <typename OTHERSCENE>
@@ -276,6 +274,9 @@ namespace ramses_internal
             EXPECT_EQ(EDrawMode::Triangles               , rs.drawMode);
             EXPECT_EQ(EDepthFunc::GreaterEqual           , rs.depthFunc);
             EXPECT_EQ(EDepthWrite::Disabled              , rs.depthWrite);
+            EXPECT_EQ(EScissorTest::Enabled              , rs.scissorTest);
+            const RenderState::ScissorRegion scissorRegion{ 10, 20, 30u, 40u };
+            EXPECT_EQ(scissorRegion                      , rs.scissorRegion);
             EXPECT_EQ(EStencilFunc::NotEqual             , rs.stencilFunc);
             EXPECT_EQ(12u                                , rs.stencilRefValue);
             EXPECT_EQ(0xAA                               , rs.stencilMask);
@@ -374,7 +375,8 @@ namespace ramses_internal
             EXPECT_EQ(samplerStates.m_addressModeU, otherScene.getTextureSampler(samplerWithTextureResource).states.m_addressModeU);
             EXPECT_EQ(samplerStates.m_addressModeV, otherScene.getTextureSampler(samplerWithTextureResource).states.m_addressModeV);
             EXPECT_EQ(samplerStates.m_addressModeR, otherScene.getTextureSampler(samplerWithTextureResource).states.m_addressModeR);
-            EXPECT_EQ(samplerStates.m_samplingMode, otherScene.getTextureSampler(samplerWithTextureResource).states.m_samplingMode);
+            EXPECT_EQ(samplerStates.m_minSamplingMode, otherScene.getTextureSampler(samplerWithTextureResource).states.m_minSamplingMode);
+            EXPECT_EQ(samplerStates.m_magSamplingMode, otherScene.getTextureSampler(samplerWithTextureResource).states.m_magSamplingMode);
             EXPECT_EQ(samplerStates.m_anisotropyLevel, otherScene.getTextureSampler(samplerWithTextureResource).states.m_anisotropyLevel);
 
             EXPECT_EQ(textureHash, otherScene.getTextureSampler(samplerWithTextureResource).textureResource);
@@ -393,14 +395,12 @@ namespace ramses_internal
             const Camera& camData = otherScene.getCamera(camera);
             EXPECT_EQ(ECameraProjectionType_Renderer, camData.projectionType);
             EXPECT_EQ(cameraNode, camData.node);
+            EXPECT_EQ(cameraVPDataInstance, camData.viewportDataInstance);
 
             const Camera& perspCamData = otherScene.getCamera(perspectiveCamera);
             EXPECT_EQ(ECameraProjectionType_Perspective, perspCamData.projectionType);
             EXPECT_EQ(cameraNode, perspCamData.node);
-            EXPECT_EQ(1u, perspCamData.viewport.posX);
-            EXPECT_EQ(2u, perspCamData.viewport.posY);
-            EXPECT_EQ(3u, perspCamData.viewport.width);
-            EXPECT_EQ(4u, perspCamData.viewport.height);
+            EXPECT_EQ(cameraVPDataInstance, perspCamData.viewportDataInstance);
             EXPECT_FLOAT_EQ(0.1f, perspCamData.frustum.leftPlane);
             EXPECT_FLOAT_EQ(0.2f, perspCamData.frustum.rightPlane);
             EXPECT_FLOAT_EQ(0.3f, perspCamData.frustum.bottomPlane);
@@ -411,10 +411,7 @@ namespace ramses_internal
             const Camera& orthoCamData = otherScene.getCamera(orthographicCamera);
             EXPECT_EQ(ECameraProjectionType_Orthographic, orthoCamData.projectionType);
             EXPECT_EQ(cameraNode, orthoCamData.node);
-            EXPECT_EQ(5u, orthoCamData.viewport.posX);
-            EXPECT_EQ(6u, orthoCamData.viewport.posY);
-            EXPECT_EQ(7u, orthoCamData.viewport.width);
-            EXPECT_EQ(8u, orthoCamData.viewport.height);
+            EXPECT_EQ(cameraVPDataInstance, orthoCamData.viewportDataInstance);
             EXPECT_FLOAT_EQ(1.1f, orthoCamData.frustum.leftPlane);
             EXPECT_FLOAT_EQ(1.2f, orthoCamData.frustum.rightPlane);
             EXPECT_FLOAT_EQ(1.3f, orthoCamData.frustum.bottomPlane);
@@ -583,12 +580,6 @@ namespace ramses_internal
             EXPECT_EQ(samplerWithTextureResource, dataSlot.attachedTextureSampler);
         }
 
-        template <typename OTHERSCENE>
-        void CheckSceneVersionTagEquivalentTo(const OTHERSCENE& otherScene) const
-        {
-            EXPECT_EQ(sceneVersionTag, otherScene.getSceneVersionTag());
-        }
-
         SCENE                       scene;
 
         const ResourceContentHash   indexArrayHash                  {111u, 0};
@@ -620,6 +611,7 @@ namespace ramses_internal
         const NodeHandle             childChild1                    {12u};
         const NodeHandle             childChild2                    {21u};
         const NodeHandle             cameraNode                     {23u};
+        const DataInstanceHandle     cameraVPDataInstance           {23u};
         const TransformHandle        t1                             {35u};
         const TransformHandle        t2                             {39u};
         const RenderableHandle       renderable                     {43u};
@@ -644,9 +636,8 @@ namespace ramses_internal
         const RenderGroupHandle      renderGroup2                   {60u};
         const RenderGroupHandle      nestedRenderGroupParent        {61u};
         const RenderGroupHandle      nestedRenderGroupChild         {62u};
-        const SceneVersionTag        sceneVersionTag                {63u};
         const UInt32                 renderableInstanceCount        = 64u;
-        const TextureSamplerStates   samplerStates                  { EWrapMethod_Repeat, EWrapMethod_Clamp, EWrapMethod_RepeatMirrored, ESamplingMethod_Nearest, 32u };
+        const TextureSamplerStates   samplerStates                  { EWrapMethod::Repeat, EWrapMethod::Clamp, EWrapMethod::RepeatMirrored, ESamplingMethod::Nearest, ESamplingMethod::Linear, 32u };
         const PixelRectangle         blitPassSourceRectangle        = PixelRectangle({1u, 2u, 300u, 400u});
         const PixelRectangle         blitPassDestinationRectangle   = PixelRectangle({5u, 6u, 700u, 800u});
         const DataBufferHandle       indexDataBuffer                { 65u };

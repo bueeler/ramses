@@ -17,8 +17,9 @@
 #include "RendererLib/EResourceStatus.h"
 #include "RendererLib/StagingInfo.h"
 #include "RendererLib/OffscreenBufferLinks.h"
-#include <unordered_map>
+#include "RendererLib/FrameTimer.h"
 #include "Scene/EScenePublicationMode.h"
+#include <unordered_map>
 
 namespace ramses_internal
 {
@@ -32,7 +33,6 @@ namespace ramses_internal
     class RendererEventCollector;
     class RendererScenes;
     class DisplayConfig;
-    class FrameTimer;
     class SceneExpirationMonitor;
     class SceneActionCollection;
     class DataReferenceLinkManager;
@@ -78,6 +78,9 @@ namespace ramses_internal
 
         void setLimitFlushesForceApply(UInt limitForPendingFlushesForceApply);
         void setLimitFlushesForceUnsubscribe(UInt limitForPendingFlushesForceUnsubscribe);
+
+        static constexpr UInt SceneActionsPerChunkToApply = 100u;
+
     private:
         void destroyScene(SceneId sceneID);
         void unloadSceneResourcesAndUnrefSceneResources(SceneId sceneId);
@@ -86,7 +89,7 @@ namespace ramses_internal
 
         UInt32 updateScenePendingFlushes(SceneId sceneID, StagingInfo& stagingInfo);
         void applySceneActions(IScene& scene, PendingFlush& flushInfo);
-        void applySceneActionsPartially(IScene& scene, PendingFlush& flushInfo);
+        void applySceneActionsPartially(IScene& scene, PendingFlush& flushInfo, bool firstChunk);
         UInt32 applyPendingFlushes(SceneId sceneID, StagingInfo& stagingInfo, EResourceStatus resourcesStatus, Bool applyFlushPartially);
         void processStagedResourceChanges(SceneId sceneID, StagingInfo& stagingInfo, DisplayHandle& activeDisplay);
 
@@ -127,23 +130,24 @@ namespace ramses_internal
 
         HashMap<DisplayHandle, IRendererResourceManager*> m_displayResourceManagers;
 
-        std::unordered_map<SceneId, Vector<SceneActionCollection>> m_pendingSceneActions;
+        std::unordered_map<SceneId, std::vector<SceneActionCollection>> m_pendingSceneActions;
 
         struct SceneMapRequest
         {
             DisplayHandle display;
             Int32 sceneRenderOrder;
+            FrameTimer::Clock::time_point requestTimeStamp;
+            FrameTimer::Clock::time_point lastLogTimeStamp;
         };
         typedef HashMap<SceneId, SceneMapRequest> SceneMapRequests;
         SceneMapRequests m_scenesToBeMapped;
-        HashSet<SceneId> m_scenesToBeShown;
 
         // extracted from RendererSceneUpdater::updateScenesTransformationCache to avoid per frame allocation
         HashSet<SceneId> m_scenesNeedingTransformationCacheUpdate;
 
         HashSet<SceneId> m_modifiedScenesToRerender;
         //used as caches for algorithms that mark scenes as modified
-        Vector<SceneId> m_offscreeenBufferModifiedScenesVisitingCache;
+        std::vector<SceneId> m_offscreeenBufferModifiedScenesVisitingCache;
         OffscreenBufferLinkVector m_offscreenBufferConsumerSceneLinksCache;
 
         UInt m_maximumPendingFlushes = 60u;

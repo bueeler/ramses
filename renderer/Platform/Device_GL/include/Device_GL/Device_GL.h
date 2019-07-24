@@ -43,6 +43,7 @@ namespace ramses_internal
         virtual void clearStencil          (Int32 s) override;
         virtual void depthFunc             (EDepthFunc func) override;
         virtual void depthWrite            (EDepthWrite flag) override;
+        virtual void scissorTest           (EScissorTest state, const RenderState::ScissorRegion& region) override;
         virtual void blendFactors          (EBlendFactor sourceColor, EBlendFactor destinationColor, EBlendFactor sourceAlpha, EBlendFactor destinationAlpha) override;
         virtual void blendOperations       (EBlendOperation operationColor, EBlendOperation operationAlpha) override;
         virtual void cullMode              (ECullMode mode) override;
@@ -50,9 +51,7 @@ namespace ramses_internal
         virtual void stencilOp             (EStencilOp sfail, EStencilOp dpfail, EStencilOp dppass) override;
         virtual void drawMode              (EDrawMode mode) override;
         virtual void setViewport           (UInt32 start, UInt32 end, UInt32 width, UInt32 height) override;
-        virtual void enableScissorTest     (Bool flag) override;
-        virtual void setScissorRegion      (UInt32 x, UInt32 y, UInt32 width, UInt32 height) override;
-        virtual void setTextureSampling    (DataFieldHandle field, EWrapMethod wrapU, EWrapMethod wrapV, EWrapMethod wrapR, ESamplingMethod sampling, UInt32 anisotropyLevel) override;
+        virtual void setTextureSampling    (DataFieldHandle field, EWrapMethod wrapU, EWrapMethod wrapV, EWrapMethod wrapR, ESamplingMethod minSampling, ESamplingMethod magSampling, UInt32 anisotropyLevel) override;
 
         virtual void setConstant(DataFieldHandle field, UInt32 count, const Float*      value) override;
         virtual void setConstant(DataFieldHandle field, UInt32 count, const Vector2*    value) override;
@@ -98,7 +97,7 @@ namespace ramses_internal
         virtual DeviceResourceHandle    uploadRenderBuffer  (const RenderBuffer& renderBuffer) override;
         virtual void                    deleteRenderBuffer  (DeviceResourceHandle handle) override;
 
-        virtual DeviceResourceHandle    uploadTextureSampler(EWrapMethod wrapU, EWrapMethod wrapV, EWrapMethod wrapR, ESamplingMethod sampling, UInt32 anisotropyLevel) override;
+        virtual DeviceResourceHandle    uploadTextureSampler(EWrapMethod wrapU, EWrapMethod wrapV, EWrapMethod wrapR, ESamplingMethod minSampling, ESamplingMethod magSampling, UInt32 anisotropyLevel) override;
         virtual void                    deleteTextureSampler(DeviceResourceHandle handle) override;
         virtual void                    activateTextureSampler(DeviceResourceHandle handle, DataFieldHandle field) override;
 
@@ -132,7 +131,7 @@ namespace ramses_internal
             UInt8 readingIndex;
         };
 
-        Vector<RenderTargetPair> m_pairedRenderTargets;
+        std::vector<RenderTargetPair> m_pairedRenderTargets;
 
         // Active states for upcoming draw call(s)
         const ShaderGPUResource_GL* m_activeShader;
@@ -157,7 +156,7 @@ namespace ramses_internal
         void setDrawBuffers(const RenderTarget& renderTarget);
 
         GLHandle generateAndBindTexture(GLenum target) const;
-        void setTextureFiltering(GLenum target, EWrapMethod wrapU, EWrapMethod wrapV, EWrapMethod wrapR, ESamplingMethod sampling, UInt32 anisotropyLevel);
+        void setTextureFiltering(GLenum target, EWrapMethod wrapU, EWrapMethod wrapV, EWrapMethod wrapR, ESamplingMethod minSampling, ESamplingMethod magSampling, UInt32 anisotropyLevel);
 
         void fillGLInternalTextureInfo(GLenum target, UInt32 width, UInt32 height, UInt32 depth, ETextureFormat textureFormat, GLTextureInfo& texInfoOut) const;
 

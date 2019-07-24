@@ -21,11 +21,8 @@ namespace ramses_internal
 
     enum ESceneActionId
     {
-        // scene
-        ESceneActionId_SetSceneVersionTag = 0,
-
         // nodes
-        ESceneActionId_SetTransformComponent,
+        ESceneActionId_SetTransformComponent = 0,
         ESceneActionId_AllocateNode,
         ESceneActionId_ReleaseNode,
         ESceneActionId_AllocateTransform,
@@ -86,6 +83,7 @@ namespace ramses_internal
         ESceneActionId_SetStateStencilFunc,
         ESceneActionId_SetStateDepthWrite,
         ESceneActionId_SetStateDepthFunc,
+        ESceneActionId_SetStateScissorTest,
         ESceneActionId_SetStateCullMode,
         ESceneActionId_SetStateDrawMode,
         ESceneActionId_SetStateBlendOperations,
@@ -95,7 +93,6 @@ namespace ramses_internal
         // camera
         ESceneActionId_AllocateCamera,
         ESceneActionId_ReleaseCamera,
-        ESceneActionId_SetCameraViewport,
         ESceneActionId_SetCameraFrustum,
 
         // render groups
@@ -195,8 +192,8 @@ namespace ramses_internal
         ESceneActionId_NUMBER_OF_TYPES
     };
 
-    typedef Vector<ESceneActionId> SceneActionIdVector;
-    typedef Vector<UInt64> TimeStampVector;
+    typedef std::vector<ESceneActionId> SceneActionIdVector;
+    typedef std::vector<UInt64> TimeStampVector;
 
     enum ESceneActionFlushBits : uint32_t
     {
@@ -215,9 +212,6 @@ case ENUMVALUE: return #ENUMVALUE
     {
         switch (type)
         {
-            // scene
-            CreateNameForEnumID(ESceneActionId_SetSceneVersionTag);
-
             // nodes
             CreateNameForEnumID(ESceneActionId_SetTransformComponent);
             CreateNameForEnumID(ESceneActionId_AllocateNode);
@@ -280,6 +274,7 @@ case ENUMVALUE: return #ENUMVALUE
             CreateNameForEnumID(ESceneActionId_SetStateStencilFunc);
             CreateNameForEnumID(ESceneActionId_SetStateDepthWrite);
             CreateNameForEnumID(ESceneActionId_SetStateDepthFunc);
+            CreateNameForEnumID(ESceneActionId_SetStateScissorTest);
             CreateNameForEnumID(ESceneActionId_SetStateCullMode);
             CreateNameForEnumID(ESceneActionId_SetStateDrawMode);
             CreateNameForEnumID(ESceneActionId_SetStateBlendOperations);
@@ -289,7 +284,6 @@ case ENUMVALUE: return #ENUMVALUE
             // camera
             CreateNameForEnumID(ESceneActionId_AllocateCamera);
             CreateNameForEnumID(ESceneActionId_ReleaseCamera);
-            CreateNameForEnumID(ESceneActionId_SetCameraViewport);
             CreateNameForEnumID(ESceneActionId_SetCameraFrustum);
 
             // render group

@@ -48,7 +48,6 @@ namespace ramses_internal
         RecreateRenderBuffersAndTargets( source, collector);
         RecreateStreamTextures(          source, collector);
         RecreateDataSlots(               source, collector);
-        RecreateSceneVersionTag(         source, collector);
     }
 
     void SceneDescriber::RecreateNodes(const IScene& source, SceneActionCollectionCreator& collector)
@@ -83,9 +82,7 @@ namespace ramses_internal
             if (source.isCameraAllocated(c))
             {
                 const Camera& camera = source.getCamera(c);
-                collector.allocateCamera(camera.projectionType, camera.node, c);
-
-                collector.setCameraViewport(c, camera.viewport);
+                collector.allocateCamera(camera.projectionType, camera.node, camera.viewportDataInstance, c);
                 if (camera.projectionType != ECameraProjectionType_Renderer)
                 {
                     collector.setCameraFrustum(c, camera.frustum);
@@ -563,15 +560,6 @@ namespace ramses_internal
             {
                 collector.allocateDataSlot(source.getDataSlot(dltHandle), dltHandle);
             }
-        }
-    }
-
-    void SceneDescriber::RecreateSceneVersionTag(const IScene& source, SceneActionCollectionCreator& collector)
-    {
-        SceneVersionTag versionTag = source.getSceneVersionTag();
-        if (versionTag != InvalidSceneVersionTag)
-        {
-            collector.setSceneVersionTag(versionTag);
         }
     }
 

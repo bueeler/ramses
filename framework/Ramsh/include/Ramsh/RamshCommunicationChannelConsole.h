@@ -41,9 +41,10 @@ class RamshCommunicationChannelConsole : public RamshCommunicationChannel, publi
         std::atomic<bool> m_pausePrompt;
         PlatformThread m_checkInputThread;
 
-        Vector<String> m_commandHistory;
+        std::vector<String> m_commandHistory;
         uint32_t m_nextCommandFromHistory;
 
+        const bool m_interactiveMode;
 };
 
 }// namespace ramses_internal

@@ -107,6 +107,29 @@ namespace ramses
         return StatusOK;
     }
 
+    status_t AppearanceImpl::setScissorTest(EScissorTest flag, int16_t x, int16_t y, uint16_t width, uint16_t height)
+    {
+        getIScene().setRenderStateScissorTest(m_renderStateHandle, AppearanceUtils::GetScissorTestInternal(flag), { x, y, width, height });
+        return StatusOK;
+    }
+
+    status_t AppearanceImpl::getScissorTestState(EScissorTest& mode) const
+    {
+        mode = AppearanceUtils::GetScissorTestFromInternal(getIScene().getRenderState(m_renderStateHandle).scissorTest);
+        return StatusOK;
+    }
+
+    status_t AppearanceImpl::getScissorRegion(int16_t& x, int16_t& y, uint16_t& width, uint16_t& height) const
+    {
+        const auto& scissorRegion = getIScene().getRenderState(m_renderStateHandle).scissorRegion;
+        x = scissorRegion.x;
+        y = scissorRegion.y;
+        width = scissorRegion.width;
+        height = scissorRegion.height;
+
+        return StatusOK;
+    }
+
     status_t AppearanceImpl::setStencilFunc(EStencilFunc func, uint8_t ref, uint8_t mask)
     {
         getIScene().setRenderStateStencilFunc(m_renderStateHandle, AppearanceUtils::GetStencilFuncInternal(func), ref, mask);
@@ -492,7 +515,6 @@ namespace ramses
         {
             return addErrorEntry("Appearance::set failed, element count does not match");
         }
-
         return StatusOK;
     }
 
@@ -532,6 +554,10 @@ namespace ramses
     template <typename T>
     status_t AppearanceImpl::setDataArrayChecked(uint32_t elementCount, const T* values, const EffectInputImpl& input)
     {
+        if (input.getSemantics() != ramses_internal::EFixedSemantics_Invalid)
+        {
+            return addErrorEntry("Appearance::set failed, can't access value of semantic uniform");
+        }
         CHECK_RETURN_ERR(checkEffectInputValidityAndValueCompatibility(input, elementCount, ramses_internal::TypeToEDataTypeTraits<T>::DataType));
 
         const BindableInput* bindableInput = m_bindableInputs.get(input.getInputIndex());
@@ -567,6 +593,10 @@ namespace ramses
     template <typename T>
     status_t AppearanceImpl::getDataArrayChecked(uint32_t elementCount, T* values, const EffectInputImpl& input) const
     {
+        if (input.getSemantics() != ramses_internal::EFixedSemantics_Invalid)
+        {
+            return addErrorEntry("Appearance::set failed, can't access value of semantic uniform");
+        }
         CHECK_RETURN_ERR(checkEffectInputValidityAndValueCompatibility(input, elementCount, ramses_internal::TypeToEDataTypeTraits<T>::DataType));
 
         const BindableInput* bindableInput = m_bindableInputs.get(input.getInputIndex());

@@ -42,8 +42,8 @@ namespace ramses_internal
         virtual void setSceneProviderServiceHandler(ISceneProviderServiceHandler* handler) override;
 
         virtual void sendCreateScene(const Guid& to, const SceneInfo& sceneInfo, EScenePublicationMode mode) override;
-        virtual void sendSceneActionList(const Vector<Guid>& toVec, SceneActionCollection&& sceneAction, SceneId sceneId, EScenePublicationMode mode) override;
-        virtual void sendPublishScene(SceneId sceneId, const Guid& clientThatHasScene, EScenePublicationMode mode, const String& name) override;
+        virtual void sendSceneActionList(const std::vector<Guid>& toVec, SceneActionCollection&& sceneAction, SceneId sceneId, EScenePublicationMode mode) override;
+        virtual void sendPublishScene(SceneId sceneId, EScenePublicationMode mode, const String& name) override;
         virtual void sendUnpublishScene(SceneId sceneId, EScenePublicationMode mode) override;
         virtual void subscribeScene(const Guid& to, SceneId sceneId) override;
         virtual void unsubscribeScene(const Guid& to, SceneId sceneId) override;
@@ -53,7 +53,7 @@ namespace ramses_internal
         virtual void handleCreateScene(ClientScene& scene, bool enableLocalOnlyOptimization) override;
         virtual void handlePublishScene(SceneId sceneId, EScenePublicationMode publicationMode) override;
         virtual void handleUnpublishScene(SceneId sceneId) override;
-        virtual void handleFlush(SceneId sceneId, ESceneFlushMode flushMode, const FlushTimeInformation& flushTimeInfo) override;
+        virtual void handleFlush(SceneId sceneId, ESceneFlushMode flushMode, const FlushTimeInformation& flushTimeInfo, SceneVersionTag versionTag) override;
         virtual void handleRemoveScene(SceneId sceneId) override;
         virtual void handleSceneSubscription(SceneId sceneId, const Guid& subscriber) override;
         virtual void handleSceneUnsubscription(SceneId sceneId, const Guid& subscriber) override;
@@ -91,7 +91,7 @@ namespace ramses_internal
         typedef HashMap<SceneId, ClientSceneLogicBase*> ClientSceneLogicMap;
         ClientSceneLogicMap m_clientSceneLogicMap;
 
-        typedef Pair<Guid, SceneId> Subscription;
+        typedef std::pair<Guid, SceneId> Subscription;
         typedef HashMap<Subscription, uint64_t > SceneActionListCountPerSubscription;
         SceneActionListCountPerSubscription m_subscriptions;
     };

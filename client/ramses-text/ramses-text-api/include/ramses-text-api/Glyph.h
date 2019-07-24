@@ -13,6 +13,7 @@
 #include "ramses-framework-api/StronglyTypedValue.h"
 #include <vector>
 #include <limits>
+#include <functional>
 
 namespace ramses
 {
@@ -58,13 +59,23 @@ namespace ramses
         }
 
         /**
-        * @brief Comparison operator
+        * @brief Equal comparison operator
         * @param[in] rhs The glyph key to be compared with
         * @returns True if glyph keys are identical, false otherwise
         */
         bool operator==(const GlyphKey& rhs) const
         {
             return identifier == rhs.identifier && fontInstanceId == rhs.fontInstanceId;
+        }
+
+        /**
+        * @brief Unequal comparison operator
+        * @param[in] rhs The glyph key to be compared with
+        * @returns False if glyph keys are identical, true otherwise
+        */
+        bool operator!=(const GlyphKey& rhs) const
+        {
+            return !(*this == rhs);
         }
 
         /// Glyph id
@@ -75,6 +86,27 @@ namespace ramses
 
     /// Vector of GlyphKey elements
     using GlyphKeyVector = std::vector<GlyphKey>;
+}
+
+namespace std
+{
+    /// Hasher for GlyphKey for use in STL hash maps
+    template <>
+    struct hash<ramses::GlyphKey>
+    {
+        /**
+        * @brief Hasher implementation
+        * @param k Value to be hashed
+        * @returns Hash usable in STL hash maps.
+        */
+        size_t operator()(const ramses::GlyphKey& k) const
+        {
+            static_assert(sizeof(ramses::GlyphKey::identifier) <= sizeof(uint32_t), "Adapt hashing function!");
+            static_assert(sizeof(ramses::GlyphKey::fontInstanceId) <= sizeof(uint32_t), "Adapt hashing function!");
+            const uint64_t val = (uint64_t(k.identifier.getValue()) << 32) | k.fontInstanceId.getValue();
+            return hash<uint64_t>()(val);
+        }
+    };
 }
 
 #endif

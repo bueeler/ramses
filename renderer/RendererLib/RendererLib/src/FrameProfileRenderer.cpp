@@ -207,7 +207,7 @@ namespace ramses_internal
     DeviceResourceHandle FrameProfileRenderer::createLineIndexBuffer(UInt32 segmentCount)
     {
         const UInt32 indexCount = 2 * segmentCount;
-        Vector<UInt16> indices(indexCount);
+        std::vector<UInt16> indices(indexCount);
         UInt16 id = 0;
         for (UInt32 i = 0; i < indexCount;)
         {
@@ -225,7 +225,7 @@ namespace ramses_internal
     DeviceResourceHandle FrameProfileRenderer::createStackedLinesIndexBuffer(UInt32 lineCount, UInt32 segmentPerLineCount)
     {
         const UInt32 indexCount = 2 * segmentPerLineCount * lineCount;
-        Vector<UInt16> indices(indexCount);
+        std::vector<UInt16> indices(indexCount);
         UInt16 id = 0;
         UInt32 i = 0;
         for (UInt32 l = 0; l < lineCount; l++)
@@ -394,14 +394,14 @@ namespace ramses_internal
         Renderable renderable = createRenderable(geometry, look, color, translation, scale);
 
         m_renderables.push_back([=](const FrameProfilerStatistics& statistics) mutable {
+
             // using scissor test to prevent graph rendering outside its box
-            m_device->setScissorRegion(static_cast<UInt32>(translation.x), static_cast<UInt32>(translation.y), FrameProfilerStatistics::NumberOfFrames, static_cast<UInt32>(TimingAreaHeight));
-            m_device->enableScissorTest(true);
+            m_device->scissorTest(EScissorTest::Enabled, { static_cast<Int16>(translation.x), static_cast<Int16>(translation.y), UInt16(FrameProfilerStatistics::NumberOfFrames), static_cast<UInt16>(TimingAreaHeight) });
 
             updateTimingLineVertexBuffer(renderable.geometry, statistics.getRegionTimings());
             render(renderable);
 
-            m_device->enableScissorTest(false);
+            m_device->scissorTest(EScissorTest::Disabled, {});
         });
     }
 
@@ -412,14 +412,13 @@ namespace ramses_internal
 
         m_renderables.push_back([=](const FrameProfilerStatistics& statistics) mutable {
             // using scissor test to prevent graph rendering outside its box
-            m_device->setScissorRegion(static_cast<UInt32>(translation.x), static_cast<UInt32>(translation.y), FrameProfilerStatistics::NumberOfFrames, static_cast<UInt32>(CounterAreaHeight));
-            m_device->enableScissorTest(true);
+            m_device->scissorTest(EScissorTest::Enabled, { static_cast<Int16>(translation.x), static_cast<Int16>(translation.y), UInt16(FrameProfilerStatistics::NumberOfFrames), static_cast<UInt16>(CounterAreaHeight) });
 
             const FrameProfilerStatistics::CounterValues& counterValues = statistics.getCounterValues(counter);
             updateCounterLineVertexBuffer(renderable.geometry, counterValues);
             render(renderable);
 
-            m_device->enableScissorTest(false);
+            m_device->scissorTest(EScissorTest::Disabled, {});
         });
     }
 

@@ -176,7 +176,7 @@ namespace ramses_internal
         resourcesToBeRequested.reserve(m_clientResourceRegistry.getAllRequestedResources().size());
         for (const auto& hash : m_clientResourceRegistry.getAllRequestedResources())
         {
-            const UInt64 frameOfLastRequest = m_clientResourceRegistry.getResourceDescriptor(hash).lastUpdateFrameCounter;
+            const UInt64 frameOfLastRequest = m_clientResourceRegistry.getResourceDescriptor(hash).lastRequestFrameIdx;
             if (frameOfLastRequest + m_numberOfFramesToRerequestResource <= m_frameCounter)
             {
                 resourcesToBeRequested.push_back(hash);
@@ -270,7 +270,7 @@ namespace ramses_internal
     {
         for (const auto& resDesc : m_clientResourceRegistry.getAllResourceDescriptors())
         {
-            if (resDesc.value.sceneUsage.contains(sceneId))
+            if (contains_c(resDesc.value.sceneUsage, sceneId))
             {
                 m_clientResourceRegistry.removeResourceRef(resDesc.key, sceneId);
             }
@@ -498,6 +498,7 @@ namespace ramses_internal
         device.colorMask(true, true, true, true);
         device.clearColor({ 0.f, 0.f, 0.f, 1.f });
         device.depthWrite(EDepthWrite::Enabled);
+        device.scissorTest(EScissorTest::Disabled, {});
         device.clear(EClearFlags_All);
 
         if (isDoubleBuffered)
@@ -506,6 +507,7 @@ namespace ramses_internal
             device.colorMask(true, true, true, true);
             device.clearColor({ 0.f, 0.f, 0.f, 1.f });
             device.depthWrite(EDepthWrite::Enabled);
+            device.scissorTest(EScissorTest::Disabled, {});
             device.clear(EClearFlags_All);
             device.pairRenderTargetsForDoubleBuffering(offscreenBufferDesc.m_renderTargetHandle, offscreenBufferDesc.m_colorBufferHandle);
         }
@@ -737,11 +739,12 @@ namespace ramses_internal
         const EWrapMethod     wrapU           = states.m_addressModeU;
         const EWrapMethod     wrapV           = states.m_addressModeV;
         const EWrapMethod     wrapR           = states.m_addressModeR;
-        const ESamplingMethod sampling        = states.m_samplingMode;
+        const ESamplingMethod minSampling     = states.m_minSamplingMode;
+        const ESamplingMethod magSampling     = states.m_magSamplingMode;
         const UInt32          anisotropyLevel = states.m_anisotropyLevel;
 
         IDevice& device = m_renderBackend.getDevice();
-        DeviceResourceHandle deviceHandle = device.uploadTextureSampler(wrapU, wrapV, wrapR, sampling, anisotropyLevel);
+        DeviceResourceHandle deviceHandle = device.uploadTextureSampler(wrapU, wrapV, wrapR, minSampling, magSampling, anisotropyLevel);
         assert(deviceHandle.isValid());
 
         sceneResources.addTextureSampler(handle, deviceHandle);

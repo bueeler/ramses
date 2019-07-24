@@ -28,11 +28,13 @@
 
 namespace ramses_internal
 {
+    constexpr DataFieldHandle Camera::ViewportOffsetField;
+    constexpr DataFieldHandle Camera::ViewportSizeField;
+
     template <template<typename, typename> class MEMORYPOOL>
     SceneT<MEMORYPOOL>::SceneT(const SceneInfo& sceneInfo)
         : m_name(sceneInfo.friendlyName)
         , m_sceneId(sceneInfo.sceneID)
-        , m_sceneVersionTag(InvalidSceneVersionTag)
     {
     }
 
@@ -164,7 +166,7 @@ namespace ramses_internal
     void SceneT<MEMORYPOOL>::addRenderTargetRenderBuffer(RenderTargetHandle targetHandle, RenderBufferHandle bufferHandle)
     {
         RenderTarget& renderTarget = *m_renderTargets.getMemory(targetHandle);
-        assert(!renderTarget.renderBuffers.contains(bufferHandle));
+        assert(!contains_c(renderTarget.renderBuffers, bufferHandle));
         renderTarget.renderBuffers.push_back(bufferHandle);
     }
 
@@ -553,6 +555,13 @@ namespace ramses_internal
     }
 
     template <template<typename, typename> class MEMORYPOOL>
+    void ramses_internal::SceneT<MEMORYPOOL>::setRenderStateScissorTest(RenderStateHandle stateHandle, EScissorTest flag, const RenderState::ScissorRegion& region)
+    {
+        m_states.getMemory(stateHandle)->scissorTest = flag;
+        m_states.getMemory(stateHandle)->scissorRegion = region;
+    }
+
+    template <template<typename, typename> class MEMORYPOOL>
     void SceneT<MEMORYPOOL>::setRenderStateStencilFunc(RenderStateHandle stateHandle, EStencilFunc func, UInt8 ref, UInt8 mask)
     {
         RenderState& state = *m_states.getMemory(stateHandle);
@@ -738,12 +747,13 @@ namespace ramses_internal
     }
 
     template <template<typename, typename> class MEMORYPOOL>
-    CameraHandle SceneT<MEMORYPOOL>::allocateCamera(ECameraProjectionType type, NodeHandle nodeHandle, CameraHandle handle)
+    CameraHandle SceneT<MEMORYPOOL>::allocateCamera(ECameraProjectionType type, NodeHandle nodeHandle, DataInstanceHandle viewportDataInstance, CameraHandle handle)
     {
         const CameraHandle actualHandle = m_cameras.allocate(handle);
         Camera& camera = *m_cameras.getMemory(actualHandle);
         camera.projectionType = type;
         camera.node = nodeHandle;
+        camera.viewportDataInstance = viewportDataInstance;
 
         return actualHandle;
     }
@@ -758,12 +768,6 @@ namespace ramses_internal
     UInt32 SceneT<MEMORYPOOL>::getCameraCount() const
     {
         return m_cameras.getTotalCount();
-    }
-
-    template <template<typename, typename> class MEMORYPOOL>
-    void SceneT<MEMORYPOOL>::setCameraViewport(CameraHandle cameraHandle, const Viewport& vp)
-    {
-        m_cameras.getMemory(cameraHandle)->viewport = vp;
     }
 
     template <template<typename, typename> class MEMORYPOOL>
@@ -789,18 +793,6 @@ namespace ramses_internal
     const String& SceneT<MEMORYPOOL>::getName() const
     {
         return m_name;
-    }
-
-    template <template<typename, typename> class MEMORYPOOL>
-    void SceneT<MEMORYPOOL>::setSceneVersionTag(SceneVersionTag sceneVersionTag)
-    {
-        m_sceneVersionTag = sceneVersionTag;
-    }
-
-    template <template<typename, typename> class MEMORYPOOL>
-    SceneVersionTag SceneT<MEMORYPOOL>::getSceneVersionTag() const
-    {
-        return m_sceneVersionTag;
     }
 
     template <template<typename, typename> class MEMORYPOOL>
@@ -1086,7 +1078,7 @@ namespace ramses_internal
     void SceneT<MEMORYPOOL>::addChildToNode(NodeHandle parent, NodeHandle child)
     {
         TopologyNode& parentNode = *m_nodes.getMemory(parent);
-        assert(!parentNode.children.contains(child));
+        assert(!contains_c(parentNode.children, child));
         parentNode.children.push_back(child);
         m_nodes.getMemory(child)->parent = parent;
     }
@@ -1095,7 +1087,7 @@ namespace ramses_internal
     void SceneT<MEMORYPOOL>::removeChildFromNode(NodeHandle parent, NodeHandle child)
     {
         TopologyNode& parentNode = *m_nodes.getMemory(parent);
-        const auto childIt = parentNode.children.find(child);
+        const auto childIt = find_c(parentNode.children, child);
         assert(childIt != parentNode.children.end());
         parentNode.children.erase(childIt);
         m_nodes.getMemory(child)->parent = NodeHandle::Invalid();

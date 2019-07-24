@@ -31,14 +31,6 @@ namespace ramses_internal
             : creator(actions)
         {}
 
-        void expectSetSceneVersionTagAction(SceneActionCollection::SceneActionReader action, SceneVersionTag versionTag)
-        {
-            EXPECT_EQ(ESceneActionId_SetSceneVersionTag, action.type());
-            SceneVersionTag actualVersion;
-            action.read(actualVersion);
-            EXPECT_EQ(versionTag, actualVersion);
-        }
-
         void expectAllocateNodeAction(SceneActionCollection::SceneActionReader action, NodeHandle handle, UInt32 expectedChildrenCount)
         {
             EXPECT_EQ(ESceneActionId_AllocateNode, action.type());
@@ -110,6 +102,10 @@ namespace ramses_internal
             , drawMode(EDrawMode::Lines)
             , depthWrite(EDepthWrite::Enabled)
             , depthFunc(EDepthFunc::SmallerEqual)
+            , scissorTest(EScissorTest::Enabled)
+            , scissorRegion{
+                12, 14, 16, 18
+            }
             , stencilFunc(EStencilFunc::NotEqual)
             , stencilRefValue(99u)
             , stencilMask(3u)
@@ -129,6 +125,8 @@ namespace ramses_internal
             EDrawMode       drawMode;
             EDepthWrite     depthWrite;
             EDepthFunc      depthFunc;
+            EScissorTest    scissorTest;
+            RenderState::ScissorRegion scissorRegion;
             EStencilFunc    stencilFunc;
             UInt8           stencilRefValue;
             UInt8           stencilMask;
@@ -147,6 +145,7 @@ namespace ramses_internal
             m_scene.setRenderStateDrawMode(       state, data.drawMode);
             m_scene.setRenderStateDepthWrite(     state, data.depthWrite);
             m_scene.setRenderStateDepthFunc(      state, data.depthFunc);
+            m_scene.setRenderStateScissorTest(    state, data.scissorTest, data.scissorRegion);
             m_scene.setRenderStateStencilFunc(    state, data.stencilFunc, data.stencilRefValue, data.stencilMask);
             m_scene.setRenderStateStencilOps(     state, data.stencilOpFail, data.stencilOpDepthFail, data.stencilOpDepthPass);
             m_scene.setRenderStateColorWriteMask( state, data.colorWriteMask);
@@ -159,9 +158,6 @@ namespace ramses_internal
 
     TEST_F(SceneDescriberTest, checksDescriptionActionsForSceneWithParentAndThreeChildren)
     {
-        SceneVersionTag versionTag(124u);
-        m_scene.setSceneVersionTag(versionTag);
-
         NodeHandle parent = m_scene.allocateNode();
         NodeHandle child2 = m_scene.allocateNode();
         NodeHandle child3 = m_scene.allocateNode();
@@ -173,7 +169,7 @@ namespace ramses_internal
 
         SceneDescriber::describeScene<IScene>(m_scene, creator);
 
-        ASSERT_EQ(8u, actions.numberOfActions());
+        ASSERT_EQ(7u, actions.numberOfActions());
         uint32_t actionIdx = 0u;
 
         expectAllocateNodeAction  (actions[actionIdx++], parent, 3u);
@@ -184,8 +180,6 @@ namespace ramses_internal
         expectAddChildToNodeAction(actions[actionIdx++], parent, child1);
         expectAddChildToNodeAction(actions[actionIdx++], parent, child2);
         expectAddChildToNodeAction(actions[actionIdx++], parent, child3);
-
-        expectSetSceneVersionTagAction(actions[actionIdx++], versionTag);
     }
 
     TEST_F(SceneDescriberTest, skipSceneActionForDataInstancesWithBinaryDataEqualZero)

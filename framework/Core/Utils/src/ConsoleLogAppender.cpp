@@ -12,15 +12,13 @@
 #include "PlatformAbstraction/PlatformTime.h"
 #include "PlatformAbstraction/PlatformEnvironmentVariables.h"
 #include "ramses-capu/os/Console.h"
+#include <time.h>
 
 namespace ramses_internal
 {
     ConsoleLogAppender::ConsoleLogAppender()
         : m_callback([]() {})
-        , m_colorsEnabled([]() {
-                                String dummy;
-                                return !PlatformEnvironmentVariables::get("DISABLE_CONSOLE_COLORS", dummy);
-                            }())
+        , m_colorsEnabled(!PlatformEnvironmentVariables::HasEnvVar("DISABLE_CONSOLE_COLORS"))
     {
     }
 
@@ -30,52 +28,60 @@ namespace ramses_internal
         ramses_capu::Console::ConsoleColor logLevelColor;
         const char* logLevelStr = nullptr;
 
-
         switch(logMessage.getLogLevel())
         {
         case ELogLevel::Trace:
             logLevelColor = ramses_capu::Console::WHITE;
-            logLevelStr = "[ Trace ] ";
+            logLevelStr = "Trace";
             break;
         case ELogLevel::Debug:
             logLevelColor = ramses_capu::Console::WHITE;
-            logLevelStr = "[ Debug ] ";
+            logLevelStr = "Debug";
             break;
         case ELogLevel::Info:
             logLevelColor = ramses_capu::Console::GREEN;
-            logLevelStr = "[ Info  ] ";
+            logLevelStr = "Info ";
             break;
         case ELogLevel::Warn:
             logLevelColor = ramses_capu::Console::YELLOW;
-            logLevelStr = "[ Warn  ] ";
+            logLevelStr = "Warn ";
             break;
         case ELogLevel::Error:
             logLevelColor = ramses_capu::Console::RED;
-            logLevelStr = "[ Error ] ";
+            logLevelStr = "Error";
             break;
         case ELogLevel::Fatal:
             logLevelColor = ramses_capu::Console::RED;
-            logLevelStr = "[ Fatal ] ";
+            logLevelStr = "Fatal";
             break;
         default:
             logLevelColor = ramses_capu::Console::RED;
-            logLevelStr = "[ ????? ] ";
+            logLevelStr = "?????";
             break;
         }
 
+        struct tm posix_tm;
+        time_t posix_time = static_cast<time_t>(now / 1000);
+#ifdef _MSC_VER
+        localtime_s(&posix_tm, &posix_time);
+#else
+        localtime_r(&posix_time, &posix_tm);
+#endif
+        char time_buffer[25] = {0};
+        strftime(time_buffer, sizeof(time_buffer), "%Y%m%d-%H:%M:%S", &posix_tm);
+
         if (m_colorsEnabled)
         {
-            ramses_capu::Console::Print(ramses_capu::Console::WHITE, "%.3f ", now/1000.0);
+            ramses_capu::Console::Print(ramses_capu::Console::WHITE, "%s.%03d ", time_buffer, now % 1000);
+            ramses_capu::Console::Print("| ");
             ramses_capu::Console::Print(logLevelColor, logLevelStr);
-            ramses_capu::Console::Print(ramses_capu::Console::AQUA, logMessage.getContext().getContextName());
+            ramses_capu::Console::Print(" | ");
+            ramses_capu::Console::Print(ramses_capu::Console::AQUA, logMessage.getContext().getContextId());
             ramses_capu::Console::Print(" | %s\n", logMessage.getStream().c_str());
         }
         else
         {
-            ramses_capu::Console::Print("%.3f ", now/1000.0);
-            ramses_capu::Console::Print(logLevelStr);
-            ramses_capu::Console::Print(logMessage.getContext().getContextName());
-            ramses_capu::Console::Print(" | %s\n", logMessage.getStream().c_str());
+            ramses_capu::Console::Print("%s.%03d | %s | %s | %s\n", time_buffer, now % 1000, logLevelStr,logMessage.getContext().getContextId(), logMessage.getStream().c_str());
         }
         ramses_capu::Console::Flush();
 

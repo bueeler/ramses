@@ -138,21 +138,21 @@ namespace ramses_internal
 
             if (!resourceToSendViaNetwork.empty())
             {
-                sos << "send locally available ";
+                sos << "send " << resourceToSendViaNetwork.size() << " locally available ";
                 for (const auto& res : resourceToSendViaNetwork)
                     sos << StringUtils::HexFromResourceContentHash(res.getResourceObject()->getHash()) << " ";
                 sos << "; ";
             }
             if (!resourcesToBeLoaded.empty())
             {
-                sos << "load from file ";
+                sos << "load " << resourcesToBeLoaded.size() << " from file ";
                 for (const auto& hash : resourcesToBeLoaded)
                     sos << StringUtils::HexFromResourceContentHash(hash) << " ";
                 sos << "; ";
             }
             if (!unavailableResources.empty())
             {
-                sos << "send unavailable ";
+                sos << "send " << unavailableResources.size() << " unavailable ";
                 for (const auto& hash : unavailableResources)
                     sos << StringUtils::HexFromResourceContentHash(hash) << " ";
             }
@@ -218,6 +218,13 @@ namespace ramses_internal
 
         if (!resourcesToBeRetrievedFromProvider.empty())
         {
+            LOG_INFO_F(CONTEXT_FRAMEWORK, ([&](ramses_internal::StringOutputStream& sos) {
+                sos << "ResourceComponent::requestResourceAsynchronouslyFromFramework(provider " << providerID << ", requester " << requesterID
+                    << "): " << "request from network " << resourcesToBeRetrievedFromProvider.size() << " resources: ";
+                for (const auto& hash : resourcesToBeRetrievedFromProvider)
+                    sos << StringUtils::HexFromResourceContentHash(hash) << " ";
+                sos << "; ";
+            }));
             m_communicationSystem.sendRequestResources(providerID, resourcesToBeRetrievedFromProvider);
         }
 
@@ -226,23 +233,17 @@ namespace ramses_internal
 
             if (!resourcesLocallyAvailable.empty())
             {
-                sos << "locally available ";
+                sos << "locally available " << resourcesLocallyAvailable.size() << " resources: ";
                 for (const auto& hash : resourcesLocallyAvailable)
                     sos << StringUtils::HexFromResourceContentHash(hash) << " ";
                 sos << "; ";
             }
             if (!resourcesToBeLoaded.empty())
             {
-                sos << "load from file ";
+                sos << "load from file " << resourcesToBeLoaded.size() << " resources: ";
                 for (const auto& hash : resourcesToBeLoaded)
                     sos << StringUtils::HexFromResourceContentHash(hash) << " ";
                 sos << "; ";
-            }
-            if (!resourcesToBeRetrievedFromProvider.empty())
-            {
-                sos << "request from network ";
-                for (const auto& hash : resourcesToBeRetrievedFromProvider)
-                    sos << StringUtils::HexFromResourceContentHash(hash) << " ";
             }
         }));
 
@@ -257,7 +258,7 @@ namespace ramses_internal
     void ResourceComponent::triggerLoadingResourcesFromFile()
     {
         PlatformGuard guard(m_frameworkLock);
-        Vector<ResourceLoadInfo> toLoadNow;
+        std::vector<ResourceLoadInfo> toLoadNow;
         bool shouldReserve = true;
         while (m_resourcesToBeLoaded.size() > 0)
         {
@@ -334,6 +335,8 @@ namespace ramses_internal
     {
         ManagedResourceVector res;
         m_arrivedResources[requesterID].swap(res);
+        LOG_INFO(CONTEXT_FRAMEWORK, "ResourceComponent::popArrivedResources: " << res.size()
+            << " resources have arrived for requester " << requesterID);
         return res;
     }
 
@@ -367,7 +370,7 @@ namespace ramses_internal
         ResourceStreamDeserializer* deserializer = *m_resourceDeserializers.get(providerID);
         assert(deserializer != nullptr);
 
-        const Vector<IResource*> resources = deserializer->processData(receivedResourceData);
+        const std::vector<IResource*> resources = deserializer->processData(receivedResourceData);
         for (const auto& res : resources)
         {
             handleArrivedResource(m_resourceStorage.manageResource(*res, false));
@@ -404,7 +407,7 @@ namespace ramses_internal
         handleArrivedResource(m_resourceStorage.manageResource(*loadedResource, true));
     }
 
-    void ResourceComponent::sendResourcesFromFile(const Vector<IResource*>& loadedResources, uint64_t bytesLoaded, const Guid& requesterId)
+    void ResourceComponent::sendResourcesFromFile(const std::vector<IResource*>& loadedResources, uint64_t bytesLoaded, const Guid& requesterId)
     {
         PlatformGuard guard(m_frameworkLock);
         ManagedResourceVector managedResources;
@@ -427,7 +430,7 @@ namespace ramses_internal
         const auto startTime = PlatformTime::GetMillisecondsMonotonic();
 
         struct NetworkResourceInfo {
-            Vector<IResource*> resources;
+            std::vector<IResource*> resources;
             uint64_t accumulatedFileSize;
         };
         HashMap<Guid, NetworkResourceInfo> resourceToSendViaNetwork(m_resourcesToLoad.size());

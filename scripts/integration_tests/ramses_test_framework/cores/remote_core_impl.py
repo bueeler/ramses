@@ -19,16 +19,14 @@ from ramses_test_framework.argparser import AdaptedArgParser
 from ramses_test_framework.cores.core_impl import CoreImpl
 from ramses_test_framework import test_classes
 from ramses_test_framework.targets.targetInfo import BridgedTargetInfo
+from ramses_test_framework.targets.target import BridgedTarget
 
 
 class RemoteCoreImpl(CoreImpl):
     def __init__(self, config):
         CoreImpl.__init__(self, config)
-        self.ramsesVersion = ""
-        self.gitCommitCount = ""
-        self.gitCommitHash = ""
+        self.usePackage = False
         self.noTransfer = False
-        self.downloadFromCICache = False
 
     def read_arguments(self):
         parser = AdaptedArgParser()
@@ -43,18 +41,17 @@ class RemoteCoreImpl(CoreImpl):
     def _add_arguments(self, parser, transferGroup, targetsGroup):
         parser.add_argument("basePath", help="Path where .tar.gz package files can be found and where test results "
                                              "should be stored")
-        transferGroup.add_argument("--package", nargs=3, metavar=('ramsesVersion', 'gitCommitCount', 'gitCommitHash'), help="for package download. wildcards can be used, first found result will be taken")
+        transferGroup.add_argument("--package", action="store_true", default=False, help="for package upload to target. search in <basepath>, expect single result")
         transferGroup.add_argument("--noTransfer", action="store_true", default=False, help="do not transfer binaries (for debugging)")
         parser.add_argument("--filter", help="test filter")
+        parser.add_argument("--random-seed", default=self.randomTestSeed, help="random seed used for test ordering")
         targetsGroup.add_argument("--targets", default=None, help="target filter")
 
     def _interpret_arguments(self, args):
         self.basePath = args.basePath
-        if args.package is not None:
-            self.ramsesVersion = args.package[0]
-            self.gitCommitCount = args.package[1]
-            self.gitCommitHash = args.package[2]
+        self.usePackage = args.package
         self.filter = args.filter
+        self.randomTestSeed = args.random_seed
         self.noTransfer = args.noTransfer
         if args.targets:
             self.config.filterTargets(args.targets)
@@ -63,7 +60,7 @@ class RemoteCoreImpl(CoreImpl):
         #create target object based on targetInfo and general config values
         target = targetInfo.classname(targetInfo, self.config.ramsesInstallDir, self.fullResultsDirPath,
             self.config.imagesDesiredDirs, self.config.imageDiffScaleFactor,
-            self.basePath, self.ramsesVersion, self.gitCommitCount, self.gitCommitHash,
+            self.basePath,
             self.config.sshConnectionNrAttempts, self.config.sshConnectionTimeoutPerAttempt,
             self.config.sshConnectionSleepPerAttempt, self.config.powerNrAttempts,
             self.config.ramsesApplicationLogLevel
@@ -73,7 +70,7 @@ class RemoteCoreImpl(CoreImpl):
     def _createBridgedTarget(self, bridgeTarget, targetInfo):
         target = targetInfo.classname(bridgeTarget, targetInfo, self.config.ramsesInstallDir, self.fullResultsDirPath,
             self.config.imagesDesiredDirs, self.config.imageDiffScaleFactor,
-            self.basePath, self.ramsesVersion, self.gitCommitCount, self.gitCommitHash,
+            self.basePath,
             self.config.sshConnectionNrAttempts, self.config.sshConnectionTimeoutPerAttempt,
             self.config.sshConnectionSleepPerAttempt, self.config.powerNrAttempts,
             self.config.ramsesApplicationLogLevel
@@ -105,15 +102,18 @@ class RemoteCoreImpl(CoreImpl):
                     log.info("Could not turn on power outlet for target {0} because the power outlet is not available".format(target.name))
                     return False
 
-        if self.downloadFromCICache:
-            for target in self.targets.itervalues():
-                downloadSuccessful, version, commitCount = helper.download_tar_from_ci_cache(self.gitCommitHash, target.buildJobName, self.config.ciCacheUrl, self.basePath)
-                if not downloadSuccessful:
-                    return False
-                target.ramsesVersion = version
-                target.gitCommitCount = commitCount
-
         return self.setupTargets(transfer_binaries and (not self.noTransfer))
+
+    def reconnectTargets(self):
+        for target in self.bridgeTargets.itervalues():
+            log.info("reconnect bridge target {}".format(target.name))
+            target.connect(error_on_fail=False)
+        for target in self.targets.itervalues():
+            if isinstance(target, BridgedTarget) and not target.bridgeTarget.isConnected:
+                log.info("skip target {} because bridge not connected".format(target.name))
+            else:
+                log.info("reconnect target {}".format(target.name))
+                target.connect(error_on_fail=False)
 
     def _create_test_runner(self):
         return xmlrunner.XMLTestRunner(output=self.fullResultsDirPath, verbosity=2)

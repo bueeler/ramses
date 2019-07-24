@@ -70,8 +70,9 @@ namespace ramses_internal
         }
     }
 
-    CommunicationSystemTestState::CommunicationSystemTestState(ECommunicationSystemType type)
+    CommunicationSystemTestState::CommunicationSystemTestState(ECommunicationSystemType type, EServiceType serviceType_)
         : communicationSystemType(type)
+        , serviceType(serviceType_)
     {
         static bool initializedLogger = false;
         if (!initializedLogger)
@@ -145,11 +146,11 @@ namespace ramses_internal
         return result;
     }
 
-    Vector<ECommunicationSystemType> CommunicationSystemTestState::GetAvailableCommunicationSystemTypes(uint32_t mask)
+    std::vector<ECommunicationSystemType> CommunicationSystemTestState::GetAvailableCommunicationSystemTypes(uint32_t mask)
     {
         UNUSED(mask);
 
-        Vector<ECommunicationSystemType> ret;
+        std::vector<ECommunicationSystemType> ret;
 #if defined(HAS_TCP_COMM)
         if (mask & ECommunicationSystemType_Tcp)
         {
@@ -178,19 +179,35 @@ namespace ramses_internal
 
     CommunicationSystemTestWrapper::~CommunicationSystemTestWrapper()
     {
-        const auto it = state.knownCommunicationSystems.find(this);
+        const auto it = find_c(state.knownCommunicationSystems, this);
         assert(it != state.knownCommunicationSystems.end());
         state.knownCommunicationSystems.erase(it);
     }
 
     void CommunicationSystemTestWrapper::registerForConnectionUpdates()
     {
-        commSystem->getConnectionStatusUpdateNotifier().registerForConnectionUpdates(&statusUpdateListener);
+        switch (state.serviceType)
+        {
+        case EServiceType::Ramses:
+            commSystem->getRamsesConnectionStatusUpdateNotifier().registerForConnectionUpdates(&statusUpdateListener);
+            break;
+        case EServiceType::Dcsm:
+            commSystem->getDcsmConnectionStatusUpdateNotifier().registerForConnectionUpdates(&statusUpdateListener);
+            break;
+        }
     }
 
     void CommunicationSystemTestWrapper::unregisterForConnectionUpdates()
     {
-        commSystem->getConnectionStatusUpdateNotifier().unregisterForConnectionUpdates(&statusUpdateListener);
+        switch (state.serviceType)
+        {
+        case EServiceType::Ramses:
+            commSystem->getRamsesConnectionStatusUpdateNotifier().unregisterForConnectionUpdates(&statusUpdateListener);
+            break;
+        case EServiceType::Dcsm:
+            commSystem->getDcsmConnectionStatusUpdateNotifier().unregisterForConnectionUpdates(&statusUpdateListener);
+            break;
+        }
     }
 
     CommunicationSystemDiscoveryDaemonTestWrapper::CommunicationSystemDiscoveryDaemonTestWrapper(CommunicationSystemTestState& state_)

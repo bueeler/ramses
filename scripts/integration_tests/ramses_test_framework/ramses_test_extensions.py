@@ -9,6 +9,7 @@
 import test_classes
 import log
 import re
+from ramses_test_framework import application
 
 def ramses_process_check(target):
     ramsesProcesses = target.get_process_list("ramses")
@@ -26,6 +27,14 @@ def with_ramses_process_check(setup_func):  # decorator function
         # continue with setup function of test
         setup_func(self)
     return extended_setup_func
+
+
+def ensureSystemCompositorRoundTrip(renderer, ivisurfaceid):
+    watchRenderer = renderer.start_watch_stdout()
+    renderer.send_ramsh_command("scSetSurfaceOpacity {0} 0.5".format(ivisurfaceid))
+    renderer.send_ramsh_command("scSetSurfaceOpacity {0} 1.0".format(ivisurfaceid))
+    opacityExecutedInSystemCompositor = renderer.wait_for_msg_in_stdout(watchRenderer, "IVIControllerSurface::HandleOpacityCallBack ivi-id: {0} opacity: 256".format(ivisurfaceid), timeout=application.Application.DEFAULT_WAIT_FOR_MESSAGE_TIMEOUT)
+    assert(opacityExecutedInSystemCompositor)  # Could not ensure system compositor roundtrip
 
 
 class IVI_Control(object):
@@ -119,6 +128,9 @@ class IVI_Control(object):
         cmd = "screen {0} renderorder {1}".format(screen_id, layer_ids)
         self.command_buffer.append(cmd)
 
+    def getScreenIds(self):
+        return self.start_state['screen'].keys()
+
     def createLayer(self, layer_id, width, height):
         cmd = "layer {0} create {1} {2}".format(layer_id, width, height)
         self.command_buffer.append(cmd)
@@ -161,3 +173,7 @@ class IVI_Control(object):
         current_renderorder = self.getScreenRenderorder(screen_id)
         self._setScreenRenderorder(screen_id, "{} {}".format(current_renderorder, layer_id))
 
+    def printCurrentState(self):
+        self.flush()
+        (stdout, _, _) = self.callIVIControl("scene")
+        log.info("--Start IVI Scene--\n" + "".join(stdout) + "\n--End  IVI Scene--")

@@ -23,7 +23,7 @@ git submodule update --init --recursive
 ```
 
 If you use the https variant, you will not get the required dependencies
-and have to download them yourself! Therefore we strongly advice to use the
+and have to download them yourself! Therefore we strongly advise to use the
 'git' protocol for download as shown above.
 
 ## Building and testing
@@ -106,7 +106,6 @@ Directly included:
 - cityhash (Licensed under MIT License)
 - Khronos Headers (Licensed under Khronos Group License)
 - lodepng (Licensed under zlib License)
-- LZ4 (Licensed under BSD-2)
 - Wayland-IVI Extension (Licensed under MIT License)
 - Wayland-IVI example client (Licensed under MIT License)
 
@@ -115,6 +114,8 @@ Submodule reference:
 - GLSLang (Licensed under BSD-3 and Khronos Group License)
 - Googletest (Licensed under BSD-3)
 - Harfbuzz (Licensed under MIT and ISC; see external/harfbuzz/COPYING)
+- Asio (Boost Software License - Version 1.0)
+- LZ4 (Licensed under BSD-2; see also external/lz4/LICENSE for more details)
 
 Included Assets:
 - Roboto Font (Licensed under Apache 2.0)

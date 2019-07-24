@@ -26,7 +26,6 @@ namespace ramses
     class Appearance;
     class Effect;
     class GeometryBinding;
-    class IInputHandler;
     class SceneImpl;
     class RamsesClientImpl;
     class AnimationSystem;
@@ -200,24 +199,6 @@ namespace ramses
         status_t destroy(SceneObject& object);
 
         /**
-        * @brief Registers an object to handle input events on input volumes within this scene.
-        *
-        * @param[in] inputHandler The object to register as handler for input events.
-        * @return StatusOK for success, otherwise the returned status can be used
-        *         to resolve error message using getStatusMessage().
-        */
-        status_t registerInputHandler(IInputHandler& inputHandler);
-
-        /**
-        * @brief Unregisters an input handler within this scene.
-        *
-        * @param[in] inputHandler The object to unregister as handler for input events.
-        * @return StatusOK for success, otherwise the returned status can be used
-        *         to resolve error message using getStatusMessage().
-        */
-        status_t unregisterInputHandler(IInputHandler& inputHandler);
-
-        /**
          * @brief Expiration timestamp is a point in time till which the scene is considered to be up-to-date.
          *        Logic on renderer side will check the time every frame and in case it detects the scene
          *        to be rendered after its expiration timestamp it will generate an event (invoke \c IRendererEventHandler::sceneExpired).
@@ -326,7 +307,8 @@ namespace ramses
         * @brief Creates a texture sampler object.
         * @param[in] wrapUMode texture wrap mode for u axis.
         * @param[in] wrapVMode texture wrap mode for v axis.
-        * @param[in] samplingMethod texture sampling method.
+        * @param[in] minSamplingMethod texture min sampling method.
+        * @param[in] magSamplingMethod texture mag sampling method. Must be set to either Nearest or Linear.
         * @param[in] texture Texture to be used with this sampler object.
         * @param[in] anisotropyLevel Texture sampling anisotropy level.
         *            1: isotropic sampling, >1: anisotropic sampling
@@ -337,7 +319,8 @@ namespace ramses
         TextureSampler* createTextureSampler(
             ETextureAddressMode wrapUMode,
             ETextureAddressMode wrapVMode,
-            ETextureSamplingMethod samplingMethod,
+            ETextureSamplingMethod minSamplingMethod,
+            ETextureSamplingMethod magSamplingMethod,
             const Texture2D& texture,
             uint32_t anisotropyLevel = 1,
             const char* name = 0);
@@ -347,7 +330,8 @@ namespace ramses
         * @param[in] wrapUMode texture wrap mode for u axis.
         * @param[in] wrapVMode texture wrap mode for v axis.
         * @param[in] wrapRMode texture wrap mode for r axis.
-        * @param[in] samplingMethod texture sampling method.
+        * @param[in] minSamplingMethod texture min sampling method.
+        * @param[in] magSamplingMethod texture mag sampling method. Must be set to either Nearest or Linear.
         * @param[in] texture Texture to be used with this sampler object.
         * @param[in] name Optional name of the object.
         * @return Pointer to the created TextureSampler, null on failure.
@@ -356,7 +340,8 @@ namespace ramses
             ETextureAddressMode wrapUMode,
             ETextureAddressMode wrapVMode,
             ETextureAddressMode wrapRMode,
-            ETextureSamplingMethod samplingMethod,
+            ETextureSamplingMethod minSamplingMethod,
+            ETextureSamplingMethod magSamplingMethod,
             const Texture3D& texture,
             const char* name = 0);
 
@@ -364,7 +349,8 @@ namespace ramses
         * @brief Creates a texture sampler object.
         * @param[in] wrapUMode texture wrap mode for u axis.
         * @param[in] wrapVMode texture wrap mode for v axis.
-        * @param[in] samplingMethod texture sampling method.
+        * @param[in] minSamplingMethod texture min sampling method.
+        * @param[in] magSamplingMethod texture mag sampling method. Must be set to either Nearest or Linear.
         * @param[in] texture Texture to be used with this sampler object.
         * @param[in] anisotropyLevel Texture sampling anisotropy level.
         *            1: isotropic sampling, >1: anisotropic sampling
@@ -375,7 +361,8 @@ namespace ramses
         TextureSampler* createTextureSampler(
             ETextureAddressMode wrapUMode,
             ETextureAddressMode wrapVMode,
-            ETextureSamplingMethod samplingMethod,
+            ETextureSamplingMethod minSamplingMethod,
+            ETextureSamplingMethod magSamplingMethod,
             const TextureCube& texture,
             uint32_t anisotropyLevel = 1,
             const char* name = 0);
@@ -384,7 +371,8 @@ namespace ramses
         * @brief Creates a texture sampler object.
         * @param[in] wrapUMode texture wrap mode for u axis.
         * @param[in] wrapVMode texture wrap mode for v axis.
-        * @param[in] samplingMethod texture sampling method.
+        * @param[in] minSamplingMethod texture min sampling method.
+        * @param[in] magSamplingMethod texture mag sampling method. Must be set to either Nearest or Linear.
         * @param[in] renderBuffer RenderBuffer to be used with this sampler object. The render buffer must have access mode of read/write.
         * @param[in] anisotropyLevel Texture sampling anisotropy level.
         *            1: isotropic sampling, >1: anisotropic sampling
@@ -395,7 +383,8 @@ namespace ramses
         TextureSampler* createTextureSampler(
             ETextureAddressMode wrapUMode,
             ETextureAddressMode wrapVMode,
-            ETextureSamplingMethod samplingMethod,
+            ETextureSamplingMethod minSamplingMethod,
+            ETextureSamplingMethod magSamplingMethod,
             const RenderBuffer& renderBuffer,
             uint32_t anisotropyLevel = 1,
             const char* name = 0);
@@ -404,7 +393,8 @@ namespace ramses
         * @brief Creates a texture sampler object for mutable texture.
         * @param[in] wrapUMode texture wrap mode for u axis.
         * @param[in] wrapVMode texture wrap mode for v axis.
-        * @param[in] samplingMethod texture sampling method.
+        * @param[in] minSamplingMethod texture min sampling method.
+        * @param[in] magSamplingMethod texture mag sampling method. Must be set to either Nearest or Linear.
         * @param[in] texture2DBuffer Texture2DBuffer to be used with this sampler object.
         * @param[in] anisotropyLevel Texture sampling anisotropy level.
         *            1: isotropic sampling, >1: anisotropic sampling
@@ -415,7 +405,8 @@ namespace ramses
         TextureSampler* createTextureSampler(
             ETextureAddressMode wrapUMode,
             ETextureAddressMode wrapVMode,
-            ETextureSamplingMethod samplingMethod,
+            ETextureSamplingMethod minSamplingMethod,
+            ETextureSamplingMethod magSamplingMethod,
             const Texture2DBuffer& texture2DBuffer,
             uint32_t anisotropyLevel = 1,
             const char* name = 0);
@@ -424,7 +415,8 @@ namespace ramses
         * @brief Creates a texture sampler object.
         * @param[in] wrapUMode texture wrap mode for u axis.
         * @param[in] wrapVMode texture wrap mode for v axis.
-        * @param[in] samplingMethod texture sampling method.
+        * @param[in] minSamplingMethod texture min sampling method.
+        * @param[in] magSamplingMethod texture mag sampling method. Must be set to either Nearest or Linear.
         * @param[in] streamTexture StreamTexture to be used with this sampler object.
         * @param[in] name Optional name of the object.
         * @return Pointer to the created TextureSampler, null on failure.
@@ -432,7 +424,8 @@ namespace ramses
         TextureSampler* createTextureSampler(
             ETextureAddressMode wrapUMode,
             ETextureAddressMode wrapVMode,
-            ETextureSamplingMethod samplingMethod,
+            ETextureSamplingMethod minSamplingMethod,
+            ETextureSamplingMethod magSamplingMethod,
             const StreamTexture& streamTexture,
             const char* name = 0);
 

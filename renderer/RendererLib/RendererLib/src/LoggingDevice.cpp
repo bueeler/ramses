@@ -136,6 +136,14 @@ namespace ramses_internal
         }
     }
 
+    void LoggingDevice::scissorTest(EScissorTest flag, const RenderState::ScissorRegion& region)
+    {
+        if (m_logContext.isLogLevelFlagEnabled(ERendererLogLevelFlag_Details))
+        {
+            m_logContext << "set scissor test: [flag: " << EnumToString(flag) << "; x: " << region.x << "; y: " << region.y << "; width: " << region.width << "; height: " << region.height << "]" << RendererLogContext::NewLine;
+        }
+    }
+
     void LoggingDevice::stencilFunc(EStencilFunc func, UInt8 ref, UInt8 mask)
     {
         if (m_logContext.isLogLevelFlagEnabled(ERendererLogLevelFlag_Details))
@@ -157,24 +165,14 @@ namespace ramses_internal
         m_logContext << "set viewport: [x: " << x << "; y: " << y << "; w: " << width << "; h: " << height << " ]" <<RendererLogContext::NewLine;
     }
 
-    void LoggingDevice::enableScissorTest(Bool flag)
-    {
-        m_logContext << (flag ? "enable" : "disable") << " scissor test"  << RendererLogContext::NewLine;
-    }
-
-    void LoggingDevice::setScissorRegion(UInt32 x, UInt32 y, UInt32 width, UInt32 height)
-    {
-        m_logContext << "set scissor region: [x: " << x << "; y: " << y << "; w: " << width << "; h: " << height << " ]" << RendererLogContext::NewLine;
-    }
-
     void LoggingDevice::drawMode(EDrawMode mode)
     {
         m_logContext << "set draw mode: " << EnumToString(mode) << RendererLogContext::NewLine;
     }
 
-    void LoggingDevice::setTextureSampling(DataFieldHandle field, EWrapMethod wrapU, EWrapMethod wrapV, EWrapMethod wrapR, ESamplingMethod sampling, UInt32 anisotropyLevel)
+    void LoggingDevice::setTextureSampling(DataFieldHandle field, EWrapMethod wrapU, EWrapMethod wrapV, EWrapMethod wrapR, ESamplingMethod minSampling, ESamplingMethod magSampling, UInt32 anisotropyLevel)
     {
-        m_logContext << "set texture sampling for texture " << field << " : [wrapU: " << EnumToString(wrapU) << "; wrapV: " << EnumToString(wrapV) << "; wrapR: " << EnumToString(wrapR) << "; sampling: " << EnumToString(sampling) << "; anisotropyLevel: " << anisotropyLevel << "]" << RendererLogContext::NewLine;
+        m_logContext << "set texture sampling for texture " << field << " : [wrapU: " << EnumToString(wrapU) << "; wrapV: " << EnumToString(wrapV) << "; wrapR: " << EnumToString(wrapR) << "; min sampling: " << EnumToString(minSampling) << "; mag sampling: " << EnumToString(magSampling) << "; anisotropyLevel: " << anisotropyLevel << "]" << RendererLogContext::NewLine;
     }
 
     DeviceResourceHandle LoggingDevice::allocateVertexBuffer(EDataType dataType, UInt32 sizeInBytes)
@@ -324,9 +322,9 @@ namespace ramses_internal
         m_logContext << "delete render buffer [handle: " << handle << "]" << RendererLogContext::NewLine;
     }
 
-    DeviceResourceHandle LoggingDevice::uploadTextureSampler(EWrapMethod wrapU, EWrapMethod wrapV, EWrapMethod wrapR, ESamplingMethod sampling, UInt32 anisotropyLevel)
+    DeviceResourceHandle LoggingDevice::uploadTextureSampler(EWrapMethod wrapU, EWrapMethod wrapV, EWrapMethod wrapR, ESamplingMethod minSampling, ESamplingMethod magSampling, UInt32 anisotropyLevel)
     {
-        m_logContext << "upload texture sampler: [wrapU: " << EnumToString(wrapU) << "; wrapV: " << EnumToString(wrapV) << "; wrapR: " << EnumToString(wrapR) << "; sampling: " << EnumToString(sampling) << "; anisotropyLevel: " << anisotropyLevel << "]" << RendererLogContext::NewLine;
+        m_logContext << "upload texture sampler: [wrapU: " << EnumToString(wrapU) << "; wrapV: " << EnumToString(wrapV) << "; wrapR: " << EnumToString(wrapR) << "; min sampling: " << EnumToString(minSampling) << "; mag sampling: " << EnumToString(magSampling) << "; anisotropyLevel: " << anisotropyLevel << "]" << RendererLogContext::NewLine;
         return DeviceResourceHandle::Invalid();
     }
 

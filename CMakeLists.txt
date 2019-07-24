@@ -6,7 +6,7 @@
 #  file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #  -------------------------------------------------------------------------
 
-CMAKE_MINIMUM_REQUIRED(VERSION 3.3)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.10)
 
 SET(ramses-sdk_ROOT_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -51,7 +51,7 @@ OPTION(ramses-sdk_BUILD_EXAMPLES "Build Example targets: ON, OFF" ON)
 OPTION(ramses-sdk_BUILD_SMOKE_TESTS "Build smoke test targets: ON, OFF" ON)
 OPTION(ramses-sdk_BUILD_DEMOS "Build demo targets: ON, OFF" ON)
 OPTION(ramses-sdk_BUILD_CLIENT_ONLY_SHARED_LIB "Build client only shared library instead of per renderer libraries" OFF)
-OPTION(ramses-sdk_ENABLE_WAYLAND_SHELL "Build a version of ramses renderer which uses wayland shell surfaces instead of IVI surfaces" OFF)
+OPTION(ramses-sdk_ENABLE_WAYLAND_SHELL "Build a version of ramses renderer which uses wayland shell surfaces instead of IVI surfaces" ON)
 OPTION(ramses-sdk_ENABLE_TCP_SUPPORT "Enable use of TCP communication" ON)
 OPTION(ramses-sdk_ENABLE_DLT "Enable dlt support" ON)
 OPTION(ramses-sdk_USE_LINUX_DEV_PTP "Enable support for synchronized ptp time on linux" OFF)
@@ -94,11 +94,14 @@ include(cmake/ramses/rendererModulePerConfig.cmake)
 
 ADD_DEFINITIONS(-DRAMSES_LINK_STATIC)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
+
+if (NOT DEFINED CMAKE_LIBRARY_OUTPUT_DIRECTORY AND NOT DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+    message(STATUS "Redirect ramses runtime and library output to ${CMAKE_CURRENT_BINARY_DIR}/bin")
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
+endif()
 set(CMAKE_DEBUG_POSTFIX "") # no debug suffix in this project
 
-set(ramses-sdk_CMAKE_CONFIG_INCLUDES_FOR_SHARED CACHE INTERNAL "")
 set(ramses-sdk_CMAKE_CONFIG_INCLUDES_FOR_STATIC CACHE INTERNAL "")
 set(ramses-shared-lib-MIXIN CACHE INTERNAL "")
 
@@ -135,7 +138,7 @@ ACME2_PROJECT(
     #==========================================================================
     # content
     #==========================================================================
-    CONTENT                     ON   external
+    CONTENT                     AUTO external
                                 ON   framework
 
                                 ON   client/ramses-client
@@ -153,6 +156,7 @@ ACME2_PROJECT(
                                 AUTO renderer/Platform/Window_Windows
                                 AUTO renderer/Platform/Window_X11
                                 AUTO renderer/Platform/Window_Wayland
+                                AUTO renderer/Platform/Window_Integrity_RGL
 
                                 # Context Components
                                 AUTO renderer/Platform/Context_WGL
@@ -178,6 +182,7 @@ ACME2_PROJECT(
                                 AUTO renderer/Platform/Surface_X11_EGL
                                 AUTO renderer/Platform/Surface_Wayland_EGL
                                 AUTO renderer/Platform/Surface_EGL_Offscreen
+                                AUTO renderer/Platform/Surface_Integrity_RGL_EGL
                                 AUTO renderer/Platform/Surface_Android_EGL
                                 AUTO renderer/Platform/PlatformFactory_Wayland_EGL
                                 AUTO renderer/Platform/PlatformFactory_Wayland_IVI_EGL
@@ -190,9 +195,8 @@ ACME2_PROJECT(
                                 AUTO renderer/Platform/Platform_Wayland_IVI_EGL_ES_3_0
                                 AUTO renderer/Platform/Platform_Wayland_Shell_EGL_ES_3_0
                                 AUTO renderer/Platform/Platform_X11_EGL_ES_3_0
+                                AUTO renderer/Platform/Platform_Integrity_RGL_EGL_ES_3_0
                                 AUTO renderer/Platform/Platform_Android_EGL_ES_3_0
-
-                                AUTO renderer/DisplayManager
 
                                 AUTO ramses-shared-lib
 
@@ -206,8 +210,6 @@ ACME2_PROJECT(
 
 
                                 AUTO demo
-
-                                AUTO external/wayland-ivi-example-client
 )
 
 #==========================================================================
@@ -261,28 +263,24 @@ FOREACH(configmodule ${configmodules})
     ENDIF()
 
     # generate and install helper files
-    if (configmodule MATCHES "ramses-shared")
-        set(ramses-sdk_CMAKE_CONFIG_INCLUDES_CURRENT ${ramses-sdk_CMAKE_CONFIG_INCLUDES_FOR_SHARED})
-    else()
-        set(ramses-sdk_CMAKE_CONFIG_INCLUDES_CURRENT ${ramses-sdk_CMAKE_CONFIG_INCLUDES_FOR_STATIC})
+    if (configmodule MATCHES "ramses-static")
+        foreach(optionalmodule IN LISTS ramses-sdk_CMAKE_CONFIG_INCLUDES_FOR_STATIC)
+            get_filename_component(fname "${optionalmodule}" NAME_WE)
+            set(fname "${fname}.cmake")
+            CONFIGURE_PACKAGE_CONFIG_FILE(
+                "${optionalmodule}"
+                "${CMAKE_CURRENT_BINARY_DIR}/cmake-config-${configmodule}/ramses-optional-${fname}"
+                INSTALL_DESTINATION "${ramses-sdk_FIND_SCRIPT_INSTALL_DIR}"
+                PATH_VARS PROJECT_INSTALL_HEADER PROJECT_INSTALL_STATIC_LIB PROJECT_INSTALL_SHARED_LIB
+                NO_SET_AND_CHECK_MACRO
+                NO_CHECK_REQUIRED_COMPONENTS_MACRO)
+            INSTALL(
+                FILES       ${CMAKE_CURRENT_BINARY_DIR}/cmake-config-${configmodule}/ramses-optional-${fname}
+                DESTINATION ${ramses-sdk_FIND_SCRIPT_INSTALL_DIR}
+                )
+            ACME_INFO("G ${fname} (${configmodule})")
+        endforeach()
     endif()
-
-    foreach(optionalmodule IN LISTS ramses-sdk_CMAKE_CONFIG_INCLUDES_CURRENT)
-        get_filename_component(fname "${optionalmodule}" NAME_WE)
-        set(fname "${fname}.cmake")
-        CONFIGURE_PACKAGE_CONFIG_FILE(
-            "${optionalmodule}"
-            "${CMAKE_CURRENT_BINARY_DIR}/cmake-config-${configmodule}/ramses-optional-${fname}"
-            INSTALL_DESTINATION "${ramses-sdk_FIND_SCRIPT_INSTALL_DIR}"
-            PATH_VARS PROJECT_INSTALL_HEADER PROJECT_INSTALL_STATIC_LIB PROJECT_INSTALL_SHARED_LIB
-            NO_SET_AND_CHECK_MACRO
-            NO_CHECK_REQUIRED_COMPONENTS_MACRO)
-        INSTALL(
-            FILES       ${CMAKE_CURRENT_BINARY_DIR}/cmake-config-${configmodule}/ramses-optional-${fname}
-            DESTINATION ${ramses-sdk_FIND_SCRIPT_INSTALL_DIR}
-            )
-        ACME_INFO("G ${fname} (${configmodule})")
-    endforeach()
 
     # generate CMake config file (use ${configmodule}Template.cmake.in as base)
     CONFIGURE_PACKAGE_CONFIG_FILE(

@@ -75,10 +75,11 @@ namespace ramses_internal
         m_device.colorMask(true, true, true, true);
         m_device.clearColor(clearColor);
         m_device.depthWrite(EDepthWrite::Enabled);
+        m_device.scissorTest(EScissorTest::Disabled, {});
         m_device.clear(EClearFlags_All);
     }
 
-    Bool DisplayController::readPixels(UInt32 x, UInt32 y, UInt32 width, UInt32 height, Vector<UInt8>& dataOut)
+    Bool DisplayController::readPixels(UInt32 x, UInt32 y, UInt32 width, UInt32 height, std::vector<UInt8>& dataOut)
     {
         if (x + width > getDisplayWidth() ||
             y + height > getDisplayHeight())

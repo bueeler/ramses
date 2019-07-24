@@ -48,9 +48,6 @@ namespace ramses_internal
 
         void preallocateSceneSize(const SceneSizeInformation& sizeInfo);
 
-        // Generic scene information
-        void setSceneVersionTag(SceneVersionTag sceneVersionTag);
-
         // Renderable allocation
         void allocateRenderable(NodeHandle nodeHandle, RenderableHandle handle);
         void releaseRenderable(RenderableHandle renderableHandle);
@@ -75,12 +72,13 @@ namespace ramses_internal
         void setRenderStateDrawMode(RenderStateHandle stateHandle, EDrawMode drawMode);
         void setRenderStateDepthFunc(RenderStateHandle stateHandle, EDepthFunc func);
         void setRenderStateDepthWrite(RenderStateHandle stateHandle, EDepthWrite flag);
+        void setRenderStateScissorTest(RenderStateHandle stateHandle, EScissorTest flag, const RenderState::ScissorRegion& region);
         void setRenderStateStencilFunc(RenderStateHandle stateHandle, EStencilFunc func, UInt8 ref, UInt8 mask);
         void setRenderStateStencilOps(RenderStateHandle stateHandle, EStencilOp sfail, EStencilOp dpfail, EStencilOp dppass);
         void setRenderStateColorWriteMask(RenderStateHandle stateHandle, ColorWriteMask colorMask);
 
         // Camera
-        void allocateCamera(ECameraProjectionType type, NodeHandle nodeHandle, CameraHandle handle);
+        void allocateCamera(ECameraProjectionType type, NodeHandle nodeHandle, DataInstanceHandle viewportDataInstance, CameraHandle handle);
         void releaseCamera(CameraHandle cameraHandle);
         void setCameraViewport(CameraHandle cameraHandle, const Viewport& vp);
         void setCameraFrustum(CameraHandle cameraHandle, const Frustum& frustum);
@@ -97,7 +95,7 @@ namespace ramses_internal
         void removeChildFromNode(NodeHandle parent, NodeHandle child);
 
         // Transformation
-        void setTransformComponent(ETransformPropertyType propertyChanged, TransformHandle node, Vector3 newValue);
+        void setTransformComponent(ETransformPropertyType propertyChanged, TransformHandle node, const Vector3& newValue);
 
         void allocateDataLayout(const DataFieldInfoVector& dataFields, DataLayoutHandle handle);
         void releaseDataLayout(DataLayoutHandle layoutHandle);
@@ -227,6 +225,7 @@ namespace ramses_internal
             const SceneSizeInformation& sizeInfo = SceneSizeInformation(),
             const SceneResourceChanges& resourceChanges = SceneResourceChanges(),
             const FlushTimeInformation& flushTimeInfo = {},
+            SceneVersionTag versionTag = InvalidSceneVersionTag,
             std::initializer_list<UInt64> additionalTimestamps = {});
 
         // compound actions

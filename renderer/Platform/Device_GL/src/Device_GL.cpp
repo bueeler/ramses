@@ -267,6 +267,19 @@ namespace ramses_internal
         glDepthMask(flag == EDepthWrite::Enabled);
     }
 
+    void Device_GL::scissorTest(EScissorTest state, const RenderState::ScissorRegion& region)
+    {
+        if (state == EScissorTest::Disabled)
+        {
+            glDisable(GL_SCISSOR_TEST);
+        }
+        else
+        {
+            glEnable(GL_SCISSOR_TEST);
+            glScissor(region.x, region.y, region.width, region.height);
+        }
+    }
+
     void Device_GL::blendFactors(EBlendFactor sourceColor, EBlendFactor destinationColor, EBlendFactor sourceAlpha, EBlendFactor destinationAlpha)
     {
         const GLenum glSourceColor = TypesConversion_GL::GetBlendFactor(sourceColor);
@@ -338,23 +351,6 @@ namespace ramses_internal
     void Device_GL::setViewport(UInt32 x, UInt32 y, UInt32 width, UInt32 height)
     {
         glViewport(x, y, width, height);
-    }
-
-    void Device_GL::enableScissorTest(Bool flag)
-    {
-        if (flag)
-        {
-            glEnable(GL_SCISSOR_TEST);
-        }
-        else
-        {
-            glDisable(GL_SCISSOR_TEST);
-        }
-    }
-
-    void Device_GL::setScissorRegion(UInt32 x, UInt32 y, UInt32 width, UInt32 height)
-    {
-        glScissor(x, y, width, height);
     }
 
     GLHandle Device_GL::createTexture(UInt32 width, UInt32 height, ETextureFormat storageFormat) const
@@ -498,7 +494,7 @@ namespace ramses_internal
         if (getUniformLocation(field, uniformLocation))
         {
             assert(0 != value);
-            glUniformMatrix2fv(uniformLocation.getValue(), count, false, value[0].getRawData());
+            glUniformMatrix2fv(uniformLocation.getValue(), count, false, value[0].data);
         }
     }
 
@@ -508,7 +504,7 @@ namespace ramses_internal
         if (getUniformLocation(field, uniformLocation))
         {
             assert(0 != value);
-            glUniformMatrix3fv(uniformLocation.getValue(), count, false, value[0].getRawData());
+            glUniformMatrix3fv(uniformLocation.getValue(), count, false, value[0].data);
         }
     }
 
@@ -518,7 +514,7 @@ namespace ramses_internal
         if (getUniformLocation(field, uniformLocation))
         {
             assert(0 != value);
-            glUniformMatrix4fv(uniformLocation.getValue(), count, false, value[0].getRawData());
+            glUniformMatrix4fv(uniformLocation.getValue(), count, false, value[0].data);
         }
     }
 
@@ -740,14 +736,14 @@ namespace ramses_internal
         m_resourceMapper.deleteResource(bufferHandle);
     }
 
-    DeviceResourceHandle Device_GL::uploadTextureSampler(EWrapMethod wrapU, EWrapMethod wrapV, EWrapMethod wrapR, ESamplingMethod sampling, UInt32 anisotropyLevel)
+    DeviceResourceHandle Device_GL::uploadTextureSampler(EWrapMethod wrapU, EWrapMethod wrapV, EWrapMethod wrapR, ESamplingMethod minSampling, ESamplingMethod magSampling, UInt32 anisotropyLevel)
     {
         GLuint sampler;
         glGenSamplers(1, &sampler);
 
-        setTextureFiltering(sampler, wrapU, wrapV, wrapR, sampling, anisotropyLevel);
+        setTextureFiltering(sampler, wrapU, wrapV, wrapR, minSampling, magSampling, anisotropyLevel);
 
-        const GPUResource& textureSamplerGPUResource = *new TextureSamplerGPUResource(wrapU, wrapV, wrapR, sampling, anisotropyLevel, sampler, 0);
+        const GPUResource& textureSamplerGPUResource = *new TextureSamplerGPUResource(wrapU, wrapV, wrapR, minSampling, magSampling, anisotropyLevel, sampler, 0);
         return m_resourceMapper.registerResource(textureSamplerGPUResource);
     }
 
@@ -938,7 +934,7 @@ namespace ramses_internal
         renderTargetPair->readingIndex = (renderTargetPair->readingIndex + 1) % 2;
     }
 
-    void Device_GL::setTextureFiltering(GLenum target, EWrapMethod wrapU, EWrapMethod wrapV, EWrapMethod wrapR, ESamplingMethod sampling, UInt32 anisotropyLevel)
+    void Device_GL::setTextureFiltering(GLenum target, EWrapMethod wrapU, EWrapMethod wrapV, EWrapMethod wrapR, ESamplingMethod minSampling, ESamplingMethod magSampling, UInt32 anisotropyLevel)
     {
         const GLenum wrappingModeR = TypesConversion_GL::GetWrapMode(wrapR);
         const GLenum wrappingModeU = TypesConversion_GL::GetWrapMode(wrapU);
@@ -948,34 +944,37 @@ namespace ramses_internal
         glTexParameteri(target, GL_TEXTURE_WRAP_T, wrappingModeV);
         glTexParameteri(target, GL_TEXTURE_WRAP_R, wrappingModeR);
 
-        switch (sampling)
+        switch (minSampling)
         {
-        case ESamplingMethod_Nearest:
+        case ESamplingMethod::Nearest:
             glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             break;
-        case ESamplingMethod_Bilinear:
+        case ESamplingMethod::Linear:
             glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             break;
-        case ESamplingMethod_NearestWithMipmaps:
+        case ESamplingMethod::Nearest_MipMapNearest:
             glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-            glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             break;
-        case ESamplingMethod_BilinearWithMipMaps:
+        case ESamplingMethod::Nearest_MipMapLinear:
+            glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+            break;
+        case ESamplingMethod::Linear_MipMapNearest:
             glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-            glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             break;
-        case ESamplingMethod_Trilinear:
+        case ESamplingMethod::Linear_MipMapLinear:
             glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-            glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             break;
-        case ESamplingMethod_MinLinearMagNearest:
-            glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        default:
+            assert(false && "Unsupported texture sampling method");
+            break;
+        }
+
+        switch (magSampling)
+        {
+        case ESamplingMethod::Nearest:
             glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             break;
-        case ESamplingMethod_MinNearestMagLinear:
-            glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        case ESamplingMethod::Linear:
             glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             break;
         default:
@@ -1004,12 +1003,12 @@ namespace ramses_internal
         return texID;
     }
 
-    void Device_GL::setTextureSampling(DataFieldHandle field, EWrapMethod wrapU, EWrapMethod wrapV, EWrapMethod wrapR, ESamplingMethod sampling, UInt32 anisotropyLevel)
+    void Device_GL::setTextureSampling(DataFieldHandle field, EWrapMethod wrapU, EWrapMethod wrapV, EWrapMethod wrapR, ESamplingMethod minSampling, ESamplingMethod magSampling, UInt32 anisotropyLevel)
     {
         // TODO violin try to remove dependency of sampling state to uniform input. Idea: provide texture explicitly, or use more modern sampler objects
         const GLenum target = TypesConversion_GL::GetTextureTargetFromTextureInputType(m_activeShader->getTextureSlot(field).textureType);
 
-        setTextureFiltering(target, wrapU, wrapV, wrapR, sampling, anisotropyLevel);
+        setTextureFiltering(target, wrapU, wrapV, wrapR, minSampling, magSampling, anisotropyLevel);
     }
 
     DeviceResourceHandle Device_GL::allocateVertexBuffer(EDataType dataType, UInt32 sizeInBytes)
@@ -1270,7 +1269,7 @@ namespace ramses_internal
 
         GLint numCompressedTextureFormats(0);
         glGetIntegerv(GL_NUM_COMPRESSED_TEXTURE_FORMATS, &numCompressedTextureFormats);
-        Vector<GLint> compressedTextureFormats(numCompressedTextureFormats);
+        std::vector<GLint> compressedTextureFormats(numCompressedTextureFormats);
         glGetIntegerv(GL_COMPRESSED_TEXTURE_FORMATS, compressedTextureFormats.data());
 
         for (GLint compressedGLTextureFormat : compressedTextureFormats)
